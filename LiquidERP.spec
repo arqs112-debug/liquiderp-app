@@ -9,10 +9,11 @@ VERSION = re.search(r'__version__ = "([^"]+)"', open(os.path.join(ROOT, "version
 a = Analysis(
     [os.path.join(ROOT, "desktop.py")],
     pathex=[ROOT],
-    datas=[(os.path.join(ROOT, "templates"), "templates"), (os.path.join(ROOT, "static"), "static")],
+    datas=[(os.path.join(ROOT, "templates"), "templates"), (os.path.join(ROOT, "static"), "static"),
+           (os.path.join(ROOT, "translations"), "translations")],
     # Moduły ładowane wewnątrz funkcji – na wszelki wypadek wymienione jawnie.
     hiddenimports=["app", "backup", "calc", "import_ejc", "mailparse", "phone_export", "production", "search",
-                   "settings", "paths", "version"],
+                   "settings", "paths", "version", "i18n"],
     excludes=["tkinter"],
     noarchive=False,
 )

@@ -1,5 +1,7 @@
 """Wyliczenia przepisu: ilości, waga, proporcje PG/VG, koszt i dostępność na magazynie."""
 import db
+import i18n
+from i18n import _
 
 TOLERANCE_PCT = 0.5  # odchyłka proporcji, od której ostrzegamy
 
@@ -16,6 +18,7 @@ def compute(conn, recipe, flavors, amount_ml=None):
     state = db.stock_state(conn)
 
     lines, warnings = [], []
+    blocking = []  # ostrzeżenia, przy których produkcja jest niemożliwa (niezależnie od języka)
 
     def add_line(role, ingredient_id, ml, pct=None):
         ing = ings.get(ingredient_id)
@@ -40,7 +43,7 @@ def compute(conn, recipe, flavors, amount_ml=None):
         })
 
     if amount <= 0:
-        return {"lines": [], "totals": {}, "warnings": ["Podaj ilość do zrobienia."]}
+        return {"lines": [], "totals": {}, "warnings": [_("Podaj ilość do zrobienia.")], "blocking": []}
 
     # Baza nikotynowa.
     nic_ml = 0.0
@@ -48,9 +51,11 @@ def compute(conn, recipe, flavors, amount_ml=None):
     target_nic = recipe.get("nicotine_mg") or 0
     if target_nic > 0:
         if base is None:
-            warnings.append("Wybierz bazę nikotynową, aby uzyskać zadaną moc.")
+            warnings.append(_("Wybierz bazę nikotynową, aby uzyskać zadaną moc."))
+            blocking.append(warnings[-1])
         elif base["nicotine_mg"] <= 0:
-            warnings.append("Wybrana baza nie ma ustawionej mocy nikotyny.")
+            warnings.append(_("Wybrana baza nie ma ustawionej mocy nikotyny."))
+            blocking.append(warnings[-1])
         else:
             nic_ml = amount * target_nic / base["nicotine_mg"]
             add_line("nicotine", base["id"], nic_ml)
@@ -65,7 +70,9 @@ def compute(conn, recipe, flavors, amount_ml=None):
     contrib_vg = sum(l["vg_ml"] for l in lines)
     remaining = amount - fixed_ml
     if remaining < -1e-9:
-        warnings.append(f"Baza i aromaty zajmują {fixed_ml:.2f} ml – więcej niż {amount:g} ml do zrobienia.")
+        warnings.append(_("Baza i aromaty zajmują {fixed} ml – więcej niż {amount} ml do zrobienia.",
+                          fixed=i18n.fmt_num(fixed_ml), amount=i18n.fmt_num(amount)))
+        blocking.append(warnings[-1])
         remaining = 0
 
     target_pg = amount * recipe["pg_pct"] / 100
@@ -81,7 +88,8 @@ def compute(conn, recipe, flavors, amount_ml=None):
     for role, key, ml in (("pg", "pg_id", pg_add), ("vg", "vg_id", vg_add)):
         if ml > 1e-9:
             if ings.get(recipe.get(key)) is None:
-                warnings.append(f"Wybierz składnik {role.upper()} – potrzeba {ml:.2f} ml.")
+                warnings.append(_("Wybierz składnik {role} – potrzeba {ml} ml.", role=role.upper(), ml=i18n.fmt_num(ml)))
+                blocking.append(warnings[-1])
             else:
                 add_line(role, recipe[key], ml)
 
@@ -91,8 +99,9 @@ def compute(conn, recipe, flavors, amount_ml=None):
     nic_mg = sum(l["nic_mg"] for l in lines)
     actual_pg = pg_ml / total_ml * 100 if total_ml else 0
     if total_ml and abs(actual_pg - recipe["pg_pct"]) > TOLERANCE_PCT:
-        warnings.append(f"Nie da się uzyskać {recipe['pg_pct']:g}/{recipe['vg_pct']:g} – wyjdzie "
-                        f"{actual_pg:.1f}/{100 - actual_pg:.1f} PG/VG.")
+        warnings.append(_("Nie da się uzyskać {pg}/{vg} – wyjdzie {apg}/{avg} PG/VG.",
+                          pg=i18n.fmt_num(recipe["pg_pct"]), vg=i18n.fmt_num(recipe["vg_pct"]),
+                          apg=i18n.fmt_num(actual_pg, 1), avg=i18n.fmt_num(100 - actual_pg, 1)))
 
     costs = [l["cost"] for l in lines]
     no_price = [l["name"] for l in lines if l["cost"] is None and l["ml"] > 0]
@@ -121,6 +130,7 @@ def compute(conn, recipe, flavors, amount_ml=None):
             "cost_complete": not no_price,
         },
         "warnings": warnings,
+        "blocking": blocking,
         "no_price": no_price,
         "missing": [{"name": l["name"], "missing": l["missing"]} for l in missing],
     }

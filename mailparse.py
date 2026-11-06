@@ -1,6 +1,6 @@
 """Rozpoznawanie potwierdzeń zamówień wklejonych z maila i dopasowanie pozycji do składników.
 
-Obsługuje tabele „Produkt | Ilość | Cena” (np. sklepy na WooCommerce), zarówno
+Obsługuje tabele „Produkt | Ilość | Cena” / „Product | Quantity | Price” (np. sklepy na WooCommerce), zarówno
 skopiowane jako tekst z Gmaila (komórki w osobnych liniach albo rozdzielone tabulatorami),
 jak i w postaci jednej linii „nazwa x 2 19,98 zł”.
 """
@@ -8,11 +8,15 @@ import difflib
 import re
 
 import db
+from i18n import _
 from search import fold
 
 QTY_RE = re.compile(r"^[x×]\s*(\d+)$", re.I)
-PRICE_RE = re.compile(r"^(\d[\d\s ]*[,.]\d{2})\s*(?:zł|pln)$", re.I)
-INLINE_RE = re.compile(r"^(.+?)\s+[x×]\s*(\d+)\s+(\d[\d\s ]*[,.]\d{2})\s*(?:zł|pln)\s*$", re.I)
+# Kwota z walutą przed albo za liczbą: „19,98 zł”, „19.98 PLN”, „€9.98”, „$ 12.50”, „1,250.00 EUR”.
+CURRENCY = r"(?:zł|pln|€|eur|\$|usd|£|gbp)"
+AMOUNT = r"\d[\d\s\u00a0,.]*[,.]\d{2}"
+PRICE_RE = re.compile(rf"^(?:{CURRENCY}\s*({AMOUNT})|({AMOUNT})\s*{CURRENCY})$", re.I)
+INLINE_RE = re.compile(rf"^(.+?)\s+[x×]\s*(\d+)\s+(?:{CURRENCY}\s*({AMOUNT})|({AMOUNT})\s*{CURRENCY})\s*$", re.I)
 SIZE_RE = re.compile(r"\s*[-–]?\s*(\d+(?:[,.]\d+)?)\s*(ml|l)\s*$", re.I)
 PREFIX_RE = re.compile(r"^aromat(?:y)?\s+spożywcz\w*\s+(?:do\s+ciast\s+(?:i\s+)?napojów\s+)?", re.I)
 FUZZY_MIN = 0.86
@@ -22,7 +26,12 @@ COMMON_BRANDS = {"Select", "MaiArt", "Inawera", "TPA", "Capella", "Atmos Lab", "
 
 
 def _num(text):
-    return float(re.sub(r"[\s ]", "", text).replace(",", "."))
+    return db.parse_num(text)
+
+
+def _price(m, first=1):
+    """Kwota z dopasowania PRICE_RE/INLINE_RE (waluta mogła stać przed albo za liczbą)."""
+    return _num(m.group(first) or m.group(first + 1))
 
 
 def _cells(text):
@@ -39,30 +48,30 @@ def parse_items(text):
     for i, cell in enumerate(cells):
         m = QTY_RE.match(cell)
         if m and i > 0 and i + 1 < len(cells) and PRICE_RE.match(cells[i + 1]):
-            items.append((cells[i - 1], int(m.group(1)), _num(PRICE_RE.match(cells[i + 1]).group(1))))
+            items.append((cells[i - 1], int(m.group(1)), _price(PRICE_RE.match(cells[i + 1]))))
     if not items:  # cała pozycja w jednej linii
         for line in text.replace("\r", "").split("\n"):
             m = INLINE_RE.match(line.strip(" |\t"))
             if m:
-                items.append((m.group(1).strip(" |\t"), int(m.group(2)), _num(m.group(3))))
+                items.append((m.group(1).strip(" |\t"), int(m.group(2)), _price(m, 3)))
     return items
 
 
 def parse_header(text):
     header = {"date": None, "supplier": "", "note": "", "total": None}
-    m = re.search(r"zamówieni\w*\s*(?:nr\.?\s*)?#?\s*(\d{3,})", text, re.I)
+    m = re.search(r"(?:zamówieni\w*|order)\s*(?:nr\.?|no\.?|number)?\s*#?\s*(\d{3,})", text, re.I)
     if m:
-        header["note"] = f"Zamówienie #{m.group(1)} (z maila)"
+        header["note"] = _("Zamówienie #{n} (z maila)", n=m.group(1))
     m = re.search(r"(\d{4}-\d{2}-\d{2})", text) or re.search(r"(\d{2})\.(\d{2})\.(\d{4})", text)
     if m:
         header["date"] = m.group(1) if len(m.groups()) == 1 else f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
-    m = re.search(r"https?://(?:www\.)?([\w-]+(?:\.[\w-]+)*\.(?:pl|com|eu))", text, re.I) \
-        or re.search(r"@([\w-]+\.(?:pl|com|eu))", text)
+    m = re.search(r"https?://(?:www\.)?([\w-]+(?:\.[\w-]+)*\.(?:pl|com|eu|net|de|uk|shop|store))", text, re.I) \
+        or re.search(r"@([\w-]+(?:\.[\w-]+)*\.(?:pl|com|eu|net|de|uk|shop|store))", text)
     if m:
         header["supplier"] = m.group(1).lower()
-    m = re.search(r"Razem:?\s*\|?\s*(\d[\d\s ]*[,.]\d{2})\s*zł", text, re.I)
+    m = re.search(rf"(?<!\w)(?:Razem|Total):?\s*\|?\s*(?:{CURRENCY}\s*({AMOUNT})|({AMOUNT})\s*{CURRENCY})", text, re.I)
     if m:
-        header["total"] = _num(m.group(1))
+        header["total"] = _price(m)
     return header
 
 

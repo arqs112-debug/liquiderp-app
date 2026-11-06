@@ -1,8 +1,10 @@
 # LiquidERP
 
+**Polski** · [English](README.en.md)
+
 Domowy program dla osób, które same robią liquidy do e-papierosów: **magazyn aromatów i baz, przepisy
 z wyliczeniem na żywo i produkcja** z odejmowaniem składników ze stanów. Działa na Windows, w całości na Twoim
-komputerze – bez konta, bez chmury, bez reklam. Darmowy, na licencji MIT.
+komputerze – bez konta, bez chmury, bez reklam. Darmowy, na licencji MIT. Interfejs po polsku albo po angielsku.
 
 ## Co potrafi
 
@@ -19,7 +21,7 @@ komputerze – bez konta, bez chmury, bez reklam. Darmowy, na licencji MIT.
   nikotyny i proporcję; dobiera też ilość bazy do docelowej mocy (np. ile ml bazy 18 mg do 50 ml shortfilla na 3 mg).
 - **Import z EJuiceCalculatora** – składniki, stany, ceny, przepisy i historia z pliku XML.
 - Wyszukiwarka (klawisz `/` lub `Ctrl+K`), sortowanie list, `Esc` wraca do listy, ciemny i jasny motyw.
-- **Ustawienia** (na dole menu): domyślne parametry przepisu, waluta, motyw, ml/g, liczba kopii, PDF na telefon;
+- **Ustawienia** (na dole menu): język (polski / English), domyślne parametry przepisu, waluta, motyw, ml/g, liczba kopii, PDF na telefon;
   w zakładkach także kopie zapasowe, import danych i informacje o programie.
 - **Kopie zapasowe** – automatycznie raz dziennie, ręcznie i przywracanie jednym kliknięciem.
 - **PDF na telefon** (opcjonalnie) – lista zakupów i stany w pliku, który program zapisuje do wybranego folderu
@@ -60,11 +62,13 @@ py -3.10 -m venv .venv
 .venv\Scripts\python app.py                :: albo w przeglądarce: http://127.0.0.1:5077
 .venv\Scripts\python tests\smoke_test.py   :: testy
 .venv\Scripts\python tests\mail_test.py
+.venv\Scripts\python tests\i18n_test.py   :: wersja angielska
 build.bat                                  :: dist\LiquidERP + instalator (wymaga Inno Setup 6)
 ```
 
 Zmienna `LIQUIDERP_DATA` wskazuje inny folder danych (np. do testów), `LIQUIDERP_PORT` – inny port.
-Numer wersji jest w `version.py`.
+Numer wersji jest w `version.py`. Tłumaczenia: teksty po polsku przechodzą przez `_("…")` / `t('…')`,
+angielskie są w `translations/en.json`; `python tools/i18n_extract.py` pokazuje braki.
 
 Zasady liczenia: płyny w ml, butelki w sztukach; przyjęcie = opakowanie × sztuki × cena za opakowanie;
 koszt jednostkowy to średnia ważona krocząca (rozchody i korekty jej nie zmieniają).

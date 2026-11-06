@@ -8,8 +8,10 @@ import webbrowser
 from flask import Flask, abort, flash, redirect, render_template, request, url_for
 
 import db
+import i18n
 import paths
 import settings
+from i18n import _
 from version import __version__, REPO_URL
 
 app = Flask(__name__, root_path=paths.RESOURCE_DIR)
@@ -20,19 +22,15 @@ HOST, PORT = "127.0.0.1", int(os.environ.get("LIQUIDERP_PORT", 5077))
 
 @app.template_filter("num")
 def fmt_num(value, digits=2):
-    if value is None:
-        return ""
-    text = f"{value:,.{digits}f}".replace(",", " ").replace(".", ",")
-    if digits and "," in text:
-        text = text.rstrip("0").rstrip(",")
-    return text
+    return i18n.fmt_num(value, digits)
 
 
 @app.template_filter("money")
 def fmt_money(value):
-    if value is None:
-        return "–"
-    return f"{value:,.2f}".replace(",", " ").replace(".", ",") + " " + settings.get("currency")
+    return i18n.fmt_money(value, settings.get("currency"))
+
+
+app.jinja_env.globals["_"] = _
 
 
 @app.after_request
@@ -52,8 +50,12 @@ def inject_globals():
             cfg = settings.all_settings(conn)
     except Exception:
         cfg = dict(settings.DEFAULTS)
-    return {"CATEGORIES": db.CATEGORIES, "SETTINGS": cfg, "CURRENCY": cfg["currency"],
-            "VERSION": __version__, "REPO_URL": REPO_URL}
+    # Nazwy kategorii i jednostki tłumaczone tylko w interfejsie (w bazie zostają klucze).
+    categories = {k: {**v, "label": _(v["label"]), "single": _(v["single"]), "unit": _(v["unit"])}
+                  for k, v in db.CATEGORIES.items()}
+    return {"CATEGORIES": categories, "SETTINGS": cfg, "CURRENCY": cfg["currency"],
+            "VERSION": __version__, "REPO_URL": REPO_URL, "LANG": i18n.current(), "LANGUAGES": i18n.LANGUAGES,
+            "JS_T": i18n.js_catalog(), "JS_LOCALE": i18n.js_locale()}
 
 
 @app.before_request
@@ -88,7 +90,7 @@ def ingredient_rows(conn, include_inactive=False):
             "price": s["avg"] if s["qty"] > 0 and s["avg"] else ing["ref_price"],
             "price_is_ref": not (s["qty"] > 0 and s["avg"]),
             "low": ing["min_stock"] > 0 and s["qty"] < ing["min_stock"],
-            "unit": db.CATEGORIES[ing["category"]]["unit"],
+            "unit": _(db.CATEGORIES[ing["category"]]["unit"]),
         })
     return rows
 
@@ -179,12 +181,12 @@ def ingredient_new():
         if request.method == "POST":
             fields = ingredient_fields_from_form(request.form)
             if not fields["name"]:
-                flash("Podaj nazwę składnika.", "error")
+                flash(_("Podaj nazwę składnika."), "error")
             elif db.find_ingredient(conn, fields["category"], fields["name"], fields["manufacturer"]):
-                flash("Taki składnik już istnieje (ta sama nazwa, producent i kategoria).", "error")
+                flash(_("Taki składnik już istnieje (ta sama nazwa, producent i kategoria)."), "error")
             else:
                 new_id = db.create_ingredient(conn, **fields)
-                flash(f"Dodano składnik: {fields['name']}.", "ok")
+                flash(_("Dodano składnik: {name}.", name=fields["name"]), "ok")
                 if request.form.get("close"):
                     return redirect(url_for("inventory"))
                 return redirect(url_for("ingredient_card", ingredient_id=new_id))
@@ -212,15 +214,15 @@ def ingredient_card(ingredient_id):
             fields = ingredient_fields_from_form(request.form)
             other = db.find_ingredient(conn, fields["category"], fields["name"], fields["manufacturer"])
             if not fields["name"]:
-                flash("Podaj nazwę składnika.", "error")
+                flash(_("Podaj nazwę składnika."), "error")
             elif other and other["id"] != ingredient_id:
-                flash("Inny składnik ma już tę nazwę, producenta i kategorię.", "error")
+                flash(_("Inny składnik ma już tę nazwę, producenta i kategorię."), "error")
             else:
                 fields["active"] = 1 if request.form.get("active") else 0
                 assignments = ", ".join(f"{k} = ?" for k in fields)
                 conn.execute(f"UPDATE ingredients SET {assignments} WHERE id = ?",
                              (*fields.values(), ingredient_id))
-                flash(f"Zapisano zmiany: {fields['name']}.", "ok")
+                flash(_("Zapisano zmiany: {name}.", name=fields["name"]), "ok")
                 if request.form.get("close"):
                     return redirect(url_for("inventory"))
             return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
@@ -235,7 +237,7 @@ def ingredient_card(ingredient_id):
             "SELECT DISTINCT supplier FROM purchases WHERE supplier <> '' ORDER BY lower(supplier)")]
         return render_template(
             "ingredient.html", ing=ing, is_new=False, state=state, history=history,
-            unit=db.CATEGORIES[ing["category"]]["unit"], today=db.today(), suppliers=suppliers,
+            unit=_(db.CATEGORIES[ing["category"]]["unit"]), today=db.today(), suppliers=suppliers,
             manufacturers=manufacturers(conn), folders=folders(conn), defaults_json=json.dumps(db.CATEGORIES),
         )
 
@@ -246,7 +248,7 @@ def ingredient_receive(ingredient_id):
     pack_count = int(db.parse_num(request.form.get("pack_count"), 1))
     pack_price = db.parse_num(request.form.get("pack_price"), 0)
     if not pack_size or pack_size <= 0 or pack_count <= 0:
-        flash("Podaj pojemność opakowania i liczbę sztuk.", "error")
+        flash(_("Podaj pojemność opakowania i liczbę sztuk."), "error")
         return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
     day = request.form.get("date") or db.today()
     with db.connect() as conn:
@@ -254,7 +256,7 @@ def ingredient_receive(ingredient_id):
                            (day, request.form.get("supplier", "").strip()))
         db.add_purchase_line(conn, cur.lastrowid, ingredient_id, day, pack_size, pack_count, pack_price)
         done = mark_bought(conn, [ingredient_id])
-    flash(f"Przyjęto {pack_count} × {fmt_num(pack_size)}." + (" Odhaczono na liście zakupów." if done else ""), "ok")
+    flash(_("Przyjęto {n} × {size}.", n=pack_count, size=fmt_num(pack_size)) + (" " + _("Odhaczono na liście zakupów.") if done else ""), "ok")
     return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
 
 
@@ -262,7 +264,7 @@ def ingredient_receive(ingredient_id):
 def ingredient_adjust(ingredient_id):
     actual = db.parse_num(request.form.get("actual_qty"))
     if actual is None or actual < 0:
-        flash("Podaj rzeczywisty stan (liczba ≥ 0).", "error")
+        flash(_("Podaj rzeczywisty stan (liczba ≥ 0)."), "error")
         return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
     with db.connect() as conn:
         current = db.stock_state(conn, ingredient_id).get(ingredient_id, {"qty": 0.0})["qty"]
@@ -272,7 +274,7 @@ def ingredient_adjust(ingredient_id):
                 "INSERT INTO movements (ingredient_id, date, kind, qty, note) VALUES (?, ?, 'adjustment', ?, ?)",
                 (ingredient_id, db.today(), diff, request.form.get("note", "").strip()),
             )
-    flash("Skorygowano stan.", "ok")
+    flash(_("Skorygowano stan."), "ok")
     return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
 
 
@@ -289,7 +291,7 @@ def movement_delete(movement_id):
                 " (SELECT 1 FROM movements WHERE purchase_id = ?)",
                 (mov["purchase_id"], mov["purchase_id"]),
             )
-    flash("Usunięto wpis z historii.", "ok")
+    flash(_("Usunięto wpis z historii."), "ok")
     return redirect(request.form.get("next") or url_for("ingredient_card", ingredient_id=mov["ingredient_id"]))
 
 
@@ -329,12 +331,12 @@ def save_receipt(conn):
         count = db.parse_num(form.getlist("pack_count")[i], 1)
         price = db.parse_num(form.getlist("pack_price")[i], 0)
         if category not in db.CATEGORIES or not size or size <= 0 or not count or count <= 0:
-            errors.append(f"Pozycja „{name}”: uzupełnij pojemność i liczbę sztuk.")
+            errors.append(_("Pozycja „{name}”: uzupełnij pojemność i liczbę sztuk.", name=name))
             continue
         sources = form.getlist("source_name")
         lines.append((category, name, manufacturer, size, int(count), price, sources[i] if i < len(sources) else ""))
     if errors or not lines:
-        for e in errors or ["Dodaj przynajmniej jedną pozycję."]:
+        for e in errors or [_("Dodaj przynajmniej jedną pozycję.")]:
             flash(e, "error")
         return redirect(url_for("receipt_new"))
 
@@ -356,11 +358,11 @@ def save_receipt(conn):
         mailparse.remember(conn, source_name, ing_id)
         bought.append(ing_id)
     done = mark_bought(conn, bought)
-    msg = f"Zapisano przyjęcie: {len(lines)} poz."
+    msg = _("Zapisano przyjęcie: {n} poz.", n=len(lines))
     if done:
-        msg += f" Odhaczono na liście zakupów: {done}."
+        msg += " " + _("Odhaczono na liście zakupów: {n}.", n=done)
     if created:
-        msg += f" Utworzono nowe składniki: {created}."
+        msg += " " + _("Utworzono nowe składniki: {n}.", n=created)
     flash(msg, "ok")
     return redirect(url_for("receipt_view", purchase_id=purchase_id))
 
@@ -415,7 +417,7 @@ def shopping():
                                 " WHERE s.done_at IS NULL ORDER BY i.manufacturer, lower(COALESCE(i.name, s.name))"):
             item = dict(row)
             item["stock"] = state.get(row["ingredient_id"], {"qty": 0})["qty"] if row["ing_id"] else None
-            item["unit"] = db.CATEGORIES[row["category"]]["unit"] if row["category"] else ""
+            item["unit"] = _(db.CATEGORIES[row["category"]]["unit"]) if row["category"] else ""
             items.append(item)
         done = conn.execute("SELECT s.*, i.name AS ing_name, i.manufacturer FROM shopping_list s"
                             " LEFT JOIN ingredients i ON i.id = s.ingredient_id WHERE s.done_at IS NOT NULL"
@@ -435,7 +437,7 @@ def api_shopping_packs():
         ing = conn.execute("SELECT * FROM ingredients WHERE id = ?", (request.args.get("ingredient_id", type=int),)).fetchone()
         if ing is None:
             abort(404)
-        return {"default": default_pack(conn, ing), "unit": db.CATEGORIES[ing["category"]]["unit"],
+        return {"default": default_pack(conn, ing), "unit": _(db.CATEGORIES[ing["category"]]["unit"]),
                 "on_list": bool(conn.execute(
                     "SELECT 1 FROM shopping_list WHERE ingredient_id = ? AND done_at IS NULL", (ing["id"],)).fetchone())}
 
@@ -448,15 +450,15 @@ def shopping_add():
         if ing is None:
             name = request.form.get("name", "").strip()
             if not name:
-                flash("Wybierz składnik z listy albo wpisz nazwę.", "error")
+                flash(_("Wybierz składnik z listy albo wpisz nazwę."), "error")
                 return back_or(url_for("shopping"))
             conn.execute("INSERT INTO shopping_list (name, pack_count) VALUES (?, 1)", (name,))
-            flash(f"Dodano do listy zakupów: {name} (spoza magazynu).", "ok")
+            flash(_("Dodano do listy zakupów: {name} (spoza magazynu).", name=name), "ok")
         elif add_to_list(conn, ing, db.parse_num(request.form.get("pack_size")),
                          int(db.parse_num(request.form.get("pack_count"), 1))):
-            flash(f"Dodano do listy zakupów: {ing['name']}.", "ok")
+            flash(_("Dodano do listy zakupów: {name}.", name=ing["name"]), "ok")
         else:
-            flash(f"{ing['name']} już jest na liście zakupów.", "error")
+            flash(_("{name} już jest na liście zakupów.", name=ing["name"]), "error")
     return back_or(url_for("shopping"))
 
 
@@ -469,7 +471,7 @@ def shopping_add_low():
             ing = conn.execute("SELECT * FROM ingredients WHERE id = ?", (r["id"],)).fetchone()
             added += add_to_list(conn, ing)
     rest = len(low) - added
-    flash(f"Dodano do listy zakupów braki: {added}" + (f" (pozostałe {rest} już były na liście)." if rest else "."), "ok")
+    flash(_("Dodano do listy zakupów braki: {n}", n=added) + (" " + _("(pozostałe {n} już były na liście).", n=rest) if rest else "."), "ok")
     return back_or(url_for("shopping"))
 
 
@@ -503,7 +505,7 @@ def shopping_delete(item_id):
 def shopping_clear_done():
     with db.connect() as conn:
         n = conn.execute("DELETE FROM shopping_list WHERE done_at IS NOT NULL").rowcount
-    flash(f"Usunięto kupione pozycje: {n}.", "ok")
+    flash(_("Usunięto kupione pozycje: {n}.", n=n), "ok")
     return redirect(url_for("shopping"))
 
 
@@ -535,7 +537,7 @@ def receipt_delete(purchase_id):
     with db.connect() as conn:
         conn.execute("DELETE FROM movements WHERE purchase_id = ?", (purchase_id,))
         conn.execute("DELETE FROM purchases WHERE id = ?", (purchase_id,))
-    flash("Usunięto przyjęcie.", "ok")
+    flash(_("Usunięto przyjęcie."), "ok")
     return redirect(url_for("receipts"))
 
 
@@ -598,7 +600,7 @@ def recipe_from_form(form):
 
 def ingredient_label(ing):
     label = ing["name"] + (f" · {ing['manufacturer']}" if ing["manufacturer"] else "")
-    return label + ("" if ing["active"] else " (nieaktywny)")
+    return label + ("" if ing["active"] else " " + _("(nieaktywny)"))
 
 
 def recipe_editor(conn, recipe, flavors, recipe_id=None):
@@ -654,12 +656,12 @@ def recipe_edit(recipe_id=None):
         if request.method == "POST":
             recipe, flavors = recipe_from_form(request.form)
             if not recipe["name"]:
-                flash("Podaj nazwę przepisu.", "error")
+                flash(_("Podaj nazwę przepisu."), "error")
                 return recipe_editor(conn, recipe, flavors, recipe_id)
             if recipe_id:
                 load_recipe(conn, recipe_id)
             recipe_id = save_recipe(conn, recipe, flavors, recipe_id)
-            flash(f"Zapisano przepis: {recipe['name']}.", "ok")
+            flash(_("Zapisano przepis: {name}.", name=recipe["name"]), "ok")
             if request.form.get("close"):
                 archived = conn.execute("SELECT archived FROM recipes WHERE id = ?", (recipe_id,)).fetchone()[0]
                 return redirect(url_for("recipes", archiwum=1) if archived else url_for("recipes"))
@@ -694,9 +696,9 @@ def new_recipe_defaults(conn):
 def recipe_duplicate(recipe_id):
     with db.connect() as conn:
         recipe, flavors = load_recipe(conn, recipe_id)
-        recipe["name"] += " (kopia)"
+        recipe["name"] += " " + _("(kopia)")
         new_id = save_recipe(conn, recipe, flavors)
-    flash("Utworzono kopię przepisu.", "ok")
+    flash(_("Utworzono kopię przepisu."), "ok")
     return redirect(url_for("recipe_edit", recipe_id=new_id))
 
 
@@ -705,7 +707,7 @@ def recipe_archive(recipe_id):
     with db.connect() as conn:
         load_recipe(conn, recipe_id)
         conn.execute("UPDATE recipes SET archived = 1 WHERE id = ?", (recipe_id,))
-    flash("Przeniesiono przepis do archiwum. Przywrócisz go z listy „Archiwum” w Przepisach.", "ok")
+    flash(_("Przeniesiono przepis do archiwum. Przywrócisz go z listy „Archiwum” w Przepisach."), "ok")
     return redirect(url_for("recipes"))
 
 
@@ -714,7 +716,7 @@ def recipe_restore(recipe_id):
     with db.connect() as conn:
         load_recipe(conn, recipe_id)
         conn.execute("UPDATE recipes SET archived = 0 WHERE id = ?", (recipe_id,))
-    flash("Przywrócono przepis z archiwum.", "ok")
+    flash(_("Przywrócono przepis z archiwum."), "ok")
     return redirect(url_for("recipe_edit", recipe_id=recipe_id))
 
 
@@ -722,7 +724,7 @@ def recipe_restore(recipe_id):
 def recipe_delete(recipe_id):
     with db.connect() as conn:
         conn.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
-    flash("Usunięto przepis.", "ok")
+    flash(_("Usunięto przepis."), "ok")
     return redirect(url_for("recipes"))
 
 
@@ -741,11 +743,11 @@ def production_new():
         if request.method == "POST":
             params = production.params_from_form(request.form)
             try:
-                production_id, _ = production.commit(conn, params)
+                production_id, _result = production.commit(conn, params)
             except production.ProductionError as exc:
                 flash(str(exc), "error")
             else:
-                flash("Zapisano produkcję i zdjęto składniki z magazynu.", "ok")
+                flash(_("Zapisano produkcję i zdjęto składniki z magazynu."), "ok")
                 return redirect(url_for("production_view", production_id=production_id))
             form = request.form
         else:
@@ -773,7 +775,7 @@ def api_production_preview():
     import production
     params = production.params_from_form(request.form)
     if params["recipe_id"] is None:
-        return {"error": "Wybierz przepis."}
+        return {"error": _("Wybierz przepis.")}
     with db.connect() as conn:
         try:
             return production.preview(conn, params)
@@ -805,7 +807,7 @@ def production_undo(production_id):
     import production
     with db.connect() as conn:
         production.undo(conn, production_id)
-    flash("Cofnięto produkcję – składniki wróciły na magazyn.", "ok")
+    flash(_("Cofnięto produkcję – składniki wróciły na magazyn."), "ok")
     return redirect(url_for("productions"))
 
 
@@ -832,8 +834,8 @@ def mixer():
         options = [{"label": ingredient_label(r), "mg": r["nicotine_mg"], "pg": r["pg_pct"]} for r in conn.execute(
             "SELECT * FROM ingredients WHERE active = 1 AND category IN ('nicotine', 'pg', 'vg', 'other')"
             " ORDER BY category, lower(name)")]
-        options += [{"label": f"Produkcja: {p['recipe_name']} ({p['date']}, {p['nicotine_mg']:g} mg, "
-                              f"{p['pg_pct']:.0f}/{p['vg_pct']:.0f})",
+        options += [{"label": _("Produkcja: {name} ({date}, {mg} mg, {pg}/{vg})", name=p["recipe_name"], date=p["date"],
+                              mg=f"{p['nicotine_mg']:g}", pg=f"{p['pg_pct']:.0f}", vg=f"{p['vg_pct']:.0f}"),
                      "mg": round(p["nicotine_mg"], 2), "pg": round(p["pg_pct"], 1)}
                     for p in conn.execute("SELECT * FROM productions ORDER BY date DESC, id DESC LIMIT 30")]
     return render_template("mixer.html", options=options)
@@ -859,7 +861,7 @@ def backups():
 @app.post("/kopie/nowa")
 def backup_create():
     import backup
-    flash(f"Utworzono kopię {backup.create('reczna')}.", "ok")
+    flash(_("Utworzono kopię {name}.", name=backup.create("reczna")), "ok")
     return redirect(url_for("backups"))
 
 
@@ -881,14 +883,13 @@ def backup_restore(name):
     except ValueError as exc:
         flash(str(exc), "error")
     else:
-        flash(f"Przywrócono dane z kopii {name}. Poprzedni stan zapisano jako kopię „przed przywróceniem”.", "ok")
+        flash(_("Przywrócono dane z kopii {name}. Poprzedni stan zapisano jako kopię „przed przywróceniem”.", name=name), "ok")
     return redirect(url_for("backups"))
 
 
 def import_message(stats):
-    return (f"Zaimportowano: {stats['ingredients']} składników (w tym {stats['inactive']} nieaktywnych),"
-            f" {stats['stock']} stanów magazynowych, {stats['recipes']} przepisów"
-            f" ({stats['flavors']} pozycji aromatów), {stats['history']} wpisów historii.")
+    return _("Zaimportowano: {ingredients} składników (w tym {inactive} nieaktywnych), {stock} stanów magazynowych,"
+             " {recipes} przepisów ({flavors} pozycji aromatów), {history} wpisów historii.", **stats)
 
 
 def run_import(conn, replace=False):
@@ -900,7 +901,7 @@ def run_import(conn, replace=False):
     else:
         source = request.form.get("path", "").strip().strip('"')
         if not source:
-            raise import_ejc.ImportError_("Wybierz plik z danymi EJuiceCalculatora.")
+            raise import_ejc.ImportError_(_("Wybierz plik z danymi EJuiceCalculatora."))
     return import_ejc.import_file(conn, source, replace=replace)
 
 
@@ -933,7 +934,11 @@ def setup_wizard():
     import import_ejc
     with db.connect() as conn:
         if request.method == "GET":
-            if settings.get("setup_done", conn) == "1" and request.args.get("ponownie") != "1":
+            again = request.args.get("ponownie") == "1"
+            if request.args.get("jezyk") in i18n.LANGUAGES:  # przełącznik języka na pierwszym ekranie
+                settings.save(conn, {"language": request.args["jezyk"]})
+                return redirect(url_for("setup_wizard", ponownie=1) if again else url_for("setup_wizard"))
+            if settings.get("setup_done", conn) == "1" and not again:
                 return redirect(url_for("dashboard"))
             return render_template("setup.html", empty=db.is_empty(conn))
         form = request.form
@@ -947,7 +952,8 @@ def setup_wizard():
                 return render_template("setup.html", empty=db.is_empty(conn), form=form)
             msg.append(import_message(stats))
         pg = min(max(db.parse_num(form.get("pg_pct"), 50), 0), 100)
-        values = {"setup_done": "1", "recipe_pg_pct": f"{pg:g}",
+        values = {"setup_done": "1", "recipe_pg_pct": f"{pg:g}", "language": i18n.current(),
+                  "currency": (form.get("currency", "").strip() or settings.get("currency", conn))[:6],
                   "recipe_nicotine_mg": f"{max(db.parse_num(form.get('nicotine_mg'), 0), 0):g}",
                   "recipe_amount_ml": f"{max(db.parse_num(form.get('amount_ml'), 50), 1):g}",
                   "measure": "g" if form.get("measure") == "g" else "ml"}
@@ -960,12 +966,12 @@ def setup_wizard():
             mg = db.parse_num(form.get("base_mg"), 18) or 18
             base_pg = min(max(db.parse_num(form.get("base_pg"), 50), 0), 100)
             values["recipe_nicotine_id"] = setup_ingredient(
-                conn, "nicotine", f"Baza {mg:g} mg", form.get("base_maker", ""), created,
+                conn, "nicotine", _("Baza {mg} mg", mg=f"{mg:g}"), form.get("base_maker", ""), created,
                 nicotine_mg=mg, pg_pct=base_pg, vg_pct=100 - base_pg, grams_per_ml=1.15 if base_pg < 50 else 1.1)
         settings.save(conn, values)
         if created:
-            msg.append(f"Dodano do magazynu: {', '.join(created)} (stan 0 – uzupełnisz przyjęciem).")
-    flash(" ".join(msg) or "Gotowe! Zacznij od przyjęcia składników albo dodania przepisu.", "ok")
+            msg.append(_("Dodano do magazynu: {names} (stan 0 – uzupełnisz przyjęciem).", names=", ".join(created)))
+    flash(" ".join(msg) or _("Gotowe! Zacznij od przyjęcia składników albo dodania przepisu."), "ok")
     return redirect(url_for("dashboard"))
 
 
@@ -1000,9 +1006,10 @@ def settings_page():
             phone_on = bool(form.get("phone_pdf_enabled"))
             errors = []
             if phone_on and not (phone_dir and os.path.isdir(phone_dir)):
-                errors.append("PDF na telefon: wybierz istniejący folder albo wyłącz tę opcję.")
+                errors.append(_("PDF na telefon: wybierz istniejący folder albo wyłącz tę opcję."))
                 phone_on = False
             values = {
+                "language": form.get("language") if form.get("language") in i18n.LANGUAGES else settings.get("language", conn),
                 "theme": "light" if form.get("theme") == "light" else "dark",
                 "measure": "g" if form.get("measure") == "g" else "ml",
                 "currency": (form.get("currency", "").strip() or "zł")[:6],
@@ -1020,7 +1027,7 @@ def settings_page():
             for e in errors:
                 flash(e, "error")
             if not errors:
-                flash("Zapisano ustawienia.", "ok")
+                flash(_("Zapisano ustawienia."), "ok")
             if phone_on:
                 import phone_export
                 phone_export.schedule(1)
@@ -1058,12 +1065,12 @@ def settings_info():
     data_dir = os.path.dirname(db.DB_PATH)
     log = os.path.join(data_dir, "liquiderp.log")
     pdf = phone_export.target_path() if phone_export.enabled() else None
-    info["paths"] = [("Folder danych", data_dir, ""),
-                     ("Baza danych", db.DB_PATH, size(db.DB_PATH)),
-                     ("Kopie zapasowe", backup.backup_dir(), ""),
-                     ("PDF na telefon", pdf, size(pdf)),
-                     ("Dziennik błędów", log, size(log)),
-                     ("Folder programu", paths.RESOURCE_DIR, "")]
+    info["paths"] = [(_("Folder danych"), data_dir, ""),
+                     (_("Baza danych"), db.DB_PATH, size(db.DB_PATH)),
+                     (_("Kopie zapasowe"), backup.backup_dir(), ""),
+                     (_("PDF na telefon"), pdf, size(pdf)),
+                     (_("Dziennik błędów"), log, size(log)),
+                     (_("Folder programu"), paths.RESOURCE_DIR, "")]
     return render_template("settings_info.html", info=info)
 
 
@@ -1088,7 +1095,7 @@ def api_pick_folder():
     except Exception:
         window = None
     if window is None:
-        return {"path": None, "error": "Wybór folderu działa w oknie programu – wpisz ścieżkę ręcznie."}
+        return {"path": None, "error": _("Wybór folderu działa w oknie programu – wpisz ścieżkę ręcznie.")}
     result = window.create_file_dialog(webview.FOLDER_DIALOG, directory=request.form.get("start", ""))
     return {"path": result[0] if result else None}
 
@@ -1098,9 +1105,9 @@ def phone_pdf_now():
     import phone_export
     path = phone_export.export()
     if path:
-        flash(f"Zapisano PDF: {path}", "ok")
+        flash(_("Zapisano PDF: {path}", path=path), "ok")
     else:
-        flash("Nie udało się zapisać PDF – sprawdź folder w ustawieniach (szczegóły w pliku liquiderp.log).", "error")
+        flash(_("Nie udało się zapisać PDF – sprawdź folder w ustawieniach (szczegóły w pliku liquiderp.log)."), "error")
     return redirect(url_for("settings_page"))
 
 
@@ -1111,13 +1118,15 @@ def issue_url(kind, title, description):
     import platform
     from urllib.parse import urlencode
     label = "bug" if kind == "bug" else "enhancement"
-    prefix = "[Błąd]" if kind == "bug" else "[Pomysł]"
-    title = title.strip() or (description.strip().splitlines() or [""])[0][:80] or "Uwaga"
-    body = (f"{description.strip()}\n\n---\n"
-            f"Wersja LiquidERP: {__version__}\n"
-            f"System: {platform.system()} {platform.release()} ({platform.version()}, {platform.machine()})\n")
+    prefix = _("[Błąd]") if kind == "bug" else _("[Pomysł]")
+    title = title.strip() or (description.strip().splitlines() or [""])[0][:80] or _("Uwaga")
+    steps = ""
     if kind == "bug":
-        body = body.replace("\n\n---\n", "\n\n**Kroki, żeby powtórzyć:**\n1. \n\n**Co powinno się stać:**\n\n---\n", 1)
+        steps = "\n\n**" + _("Kroki, żeby powtórzyć:") + "**\n1. \n\n**" + _("Co powinno się stać:") + "**\n"
+    body = (f"{description.strip()}{steps}\n\n---\n"
+            f"{_('Wersja LiquidERP')}: {__version__}\n"
+            f"{_('Język programu')}: {i18n.LANGUAGES[i18n.current()]}\n"
+            f"System: {platform.system()} {platform.release()} ({platform.version()}, {platform.machine()})\n")
     return f"{REPO_URL}/issues/new?" + urlencode({"title": f"{prefix} {title}", "body": body, "labels": label})
 
 
@@ -1125,7 +1134,7 @@ def issue_url(kind, title, description):
 def api_report():
     description = request.form.get("description", "")
     if not description.strip():
-        return {"error": "Opisz uwagę – choćby jednym zdaniem."}, 400
+        return {"error": _("Opisz uwagę – choćby jednym zdaniem.")}, 400
     url = issue_url(request.form.get("kind", "bug"), request.form.get("title", ""), description)
     opened = webbrowser.open(url)
     return {"url": url, "opened": bool(opened)}

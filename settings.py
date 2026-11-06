@@ -3,6 +3,7 @@ import os
 
 DEFAULTS = {
     "setup_done": "0",            # kreator pierwszego uruchomienia zakończony
+    "language": "",               # pl / en; pusty = wg języka Windows
     "theme": "dark",              # dark / light
     "measure": "ml",              # ml (odmierzam) / g (ważę)
     "currency": "zł",             # symbol waluty za kwotą

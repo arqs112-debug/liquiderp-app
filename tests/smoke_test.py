@@ -3,6 +3,8 @@ import os, sys, tempfile
 os.environ["LIQUIDERP_DATA"] = tempfile.mkdtemp()  # nic nie trafia do %AppData%
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import db
+import i18n
+i18n.force("pl")  # test sprawdza polskie teksty niezależnie od języka Windows
 db.init_db()
 import app as m
 import settings

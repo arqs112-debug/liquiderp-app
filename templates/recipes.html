@@ -1,33 +1,33 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Archiwum przepisów' if archive else 'Przepisy' }}{% endblock %}
+{% block title %}{{ _('Archiwum przepisów') if archive else _('Przepisy') }}{% endblock %}
 {% block back %}{{ url_for('recipes') if archive else '' }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>{{ 'Archiwum przepisów' if archive else 'Przepisy' }}</h1>
+  <h1>{{ _('Archiwum przepisów') if archive else _('Przepisy') }}</h1>
   <div class="actions">
     {% if archive %}
-      <a class="btn primary" href="{{ url_for('recipes') }}"><svg><use href="#i-flask"/></svg>Aktywne przepisy</a>
+      <a class="btn primary" href="{{ url_for('recipes') }}"><svg><use href="#i-flask"/></svg>{{ _('Aktywne przepisy') }}</a>
     {% else %}
-      <a class="btn primary" href="{{ url_for('recipe_edit') }}"><svg><use href="#i-plus"/></svg>Nowy przepis</a>
-      <a class="btn" href="{{ url_for('production_new') }}"><svg><use href="#i-make"/></svg>Zrób liquid</a>
-      <a class="btn" href="{{ url_for('recipes', archiwum=1) }}"><svg><use href="#i-archive"/></svg>Archiwum{% if archived_count %} ({{ archived_count }}){% endif %}</a>
+      <a class="btn primary" href="{{ url_for('recipe_edit') }}"><svg><use href="#i-plus"/></svg>{{ _('Nowy przepis') }}</a>
+      <a class="btn" href="{{ url_for('production_new') }}"><svg><use href="#i-make"/></svg>{{ _('Zrób liquid') }}</a>
+      <a class="btn" href="{{ url_for('recipes', archiwum=1) }}"><svg><use href="#i-archive"/></svg>{{ _('Archiwum') }}{% if archived_count %} ({{ archived_count }}){% endif %}</a>
     {% endif %}
   </div>
 </div>
 
 <div class="toolbar">
   <div class="chips" id="chips">
-    <button type="button" data-folder="" class="on">Wszystkie <span>{{ rows|length }}</span></button>
+    <button type="button" data-folder="" class="on">{{ _('Wszystkie') }} <span>{{ rows|length }}</span></button>
     {% for f in folders %}
       <button type="button" data-folder="{{ f }}">{{ f }} <span>{{ rows|selectattr('folder', 'equalto', f)|list|length }}</span></button>
     {% endfor %}
   </div>
-  <input type="search" id="search" placeholder="Szukaj: nazwa, aromat, producent, notatki…" autofocus>
+  <input type="search" id="search" placeholder="{{ _('Szukaj: nazwa, aromat, producent, notatki…') }}" autofocus>
 </div>
 
 <table class="grid" id="list">
   <thead>
-    <tr><th>Nazwa</th><th>Aromaty</th><th class="r">Ocena</th><th class="r">Nikotyna</th><th class="r">PG/VG</th><th class="r">Ostatnio</th>{% if archive %}<th></th>{% endif %}</tr>
+    <tr><th>{{ _('Nazwa') }}</th><th>{{ _('Aromaty') }}</th><th class="r">{{ _('Ocena') }}</th><th class="r">{{ _('Nikotyna') }}</th><th class="r">{{ _('PG/VG') }}</th><th class="r">{{ _('Ostatnio') }}</th>{% if archive %}<th></th>{% endif %}</tr>
   </thead>
   <tbody>
   {% for r in rows %}
@@ -41,15 +41,15 @@
       <td class="r" data-sort="{{ r.last_made or '' }}">{{ r.last_made[:10] if r.last_made else '–' }}{% if r.made_count %}<small> ({{ r.made_count }}×)</small>{% endif %}</td>
       {% if archive %}
         <td class="r" onclick="event.stopPropagation()">
-          <form method="post" action="{{ url_for('recipe_restore', recipe_id=r.id) }}"><button class="link">przywróć</button></form>
+          <form method="post" action="{{ url_for('recipe_restore', recipe_id=r.id) }}"><button class="link">{{ _('przywróć') }}</button></form>
         </td>
       {% endif %}
     </tr>
   {% else %}
     {% if archive %}
-      <tr><td colspan="7" class="empty">Archiwum jest puste. Przepis zarchiwizujesz przyciskiem „Archiwizuj” w jego edytorze.</td></tr>
+      <tr><td colspan="7" class="empty">{{ _('Archiwum jest puste. Przepis zarchiwizujesz przyciskiem „Archiwizuj” w jego edytorze.') }}</td></tr>
     {% else %}
-      <tr><td colspan="6" class="empty">Brak przepisów. Możesz je <a href="{{ url_for('import_page') }}">zaimportować z EJuiceCalculatora</a>.</td></tr>
+      <tr><td colspan="6" class="empty">{{ _('Brak przepisów. Możesz je') }} <a href="{{ url_for('import_page') }}">{{ _('zaimportować z EJuiceCalculatora') }}</a>.</td></tr>
     {% endif %}
   {% endfor %}
   </tbody>

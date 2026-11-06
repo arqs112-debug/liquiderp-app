@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block back %}{{ url_for('dashboard') }}{% endblock %}
-{% block title %}Szukaj{% endblock %}
+{% block title %}{{ _('Szukaj') }}{% endblock %}
 {% block content %}
-<div class="pagehead"><h1>Wyniki dla „{{ q }}”</h1></div>
-{% set labels = {'ingredients': 'Składniki', 'recipes': 'Przepisy', 'productions': 'Produkcja', 'purchases': 'Przyjęcia'} %}
+<div class="pagehead"><h1>{{ _('Wyniki dla „{q}”', q=q) }}</h1></div>
+{% set labels = {'ingredients': _('Składniki'), 'recipes': _('Przepisy'), 'productions': _('Produkcja'), 'purchases': _('Przyjęcia')} %}
 {% if not groups or not (groups.values()|sum(start=[])) %}
-  <p class="muted">Nic nie znaleziono. Wyszukiwarka ignoruje wielkość liter i polskie znaki, a każde wpisane słowo musi pasować.</p>
+  <p class="muted">{{ _('Nic nie znaleziono. Wyszukiwarka ignoruje wielkość liter i polskie znaki, a każde wpisane słowo musi pasować.') }}</p>
 {% else %}
   {% for key, items in groups.items() if items %}
     <section class="card">
@@ -14,7 +14,7 @@
         {% for it in items %}
           <li class="{{ '' if it.active else 'inactive' }}"><a href="{{ it.url }}"><b>{{ it.title }}</b></a>
             {% if it.sub %}<small>{{ it.sub }}</small>{% endif %}
-            {% if not it.active %}<span class="tag warn">nieaktywny</span>{% endif %}
+            {% if not it.active %}<span class="tag warn">{{ _('nieaktywny') }}</span>{% endif %}
             {% if it.snippet %}<div class="desc">{{ it.snippet }}</div>{% endif %}</li>
         {% endfor %}
       </ul>

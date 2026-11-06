@@ -1,71 +1,71 @@
 {% extends "base.html" %}
 {% block back %}{{ url_for('recipes', archiwum=1) if recipe.archived else url_for('recipes') }}{% endblock %}
-{% block title %}{{ recipe.name or 'Nowy przepis' }}{% endblock %}
+{% block title %}{{ recipe.name or _('Nowy przepis') }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>{{ recipe.name or 'Nowy przepis' }}{% if recipe.folder %} <span class="tag group">{{ recipe.folder }}</span>{% endif %}</h1>
+  <h1>{{ recipe.name or _('Nowy przepis') }}{% if recipe.folder %} <span class="tag group">{{ recipe.folder }}</span>{% endif %}</h1>
   <div class="actions">
-    <button class="btn primary" form="recipeForm" name="close" value="1" title="Zapisz i wróć do listy przepisów"><svg><use href="#i-save"/></svg>Zapisz i zamknij</button>
+    <button class="btn primary" form="recipeForm" name="close" value="1" title="{{ _('Zapisz i wróć do listy przepisów') }}"><svg><use href="#i-save"/></svg>{{ _('Zapisz i zamknij') }}</button>
     {% if recipe_id %}
-      <a class="btn" href="{{ url_for('production_new', przepis=recipe_id) }}" title="Zrób z zapisanej wersji przepisu"><svg><use href="#i-make"/></svg>Zrób liquid</a>
-      <button class="btn" form="dupForm"><svg><use href="#i-plus"/></svg>Duplikuj</button>
+      <a class="btn" href="{{ url_for('production_new', przepis=recipe_id) }}" title="{{ _('Zrób z zapisanej wersji przepisu') }}"><svg><use href="#i-make"/></svg>{{ _('Zrób liquid') }}</a>
+      <button class="btn" form="dupForm"><svg><use href="#i-plus"/></svg>{{ _('Duplikuj') }}</button>
       {% if recipe.archived %}
-        <button class="btn" form="restoreForm"><svg><use href="#i-archive"/></svg>Przywróć z archiwum</button>
+        <button class="btn" form="restoreForm"><svg><use href="#i-archive"/></svg>{{ _('Przywróć z archiwum') }}</button>
       {% else %}
-        <button class="btn" form="archiveForm" title="Ukryj przepis z listy – można go przywrócić"><svg><use href="#i-archive"/></svg>Archiwizuj</button>
+        <button class="btn" form="archiveForm" title="{{ _('Ukryj przepis z listy – można go przywrócić') }}"><svg><use href="#i-archive"/></svg>{{ _('Archiwizuj') }}</button>
       {% endif %}
-      <button class="btn danger" form="delForm">Usuń</button>
+      <button class="btn danger" form="delForm">{{ _('Usuń') }}</button>
     {% endif %}
-    <a class="btn" href="{{ url_for('recipes') }}"><svg><use href="#i-list"/></svg>Lista przepisów</a>
+    <a class="btn" href="{{ url_for('recipes') }}"><svg><use href="#i-list"/></svg>{{ _('Lista przepisów') }}</a>
   </div>
 </div>
 {% if recipe_id %}
   <form id="dupForm" method="post" action="{{ url_for('recipe_duplicate', recipe_id=recipe_id) }}"></form>
   <form id="archiveForm" method="post" action="{{ url_for('recipe_archive', recipe_id=recipe_id) }}"></form>
   <form id="restoreForm" method="post" action="{{ url_for('recipe_restore', recipe_id=recipe_id) }}"></form>
-  {% if recipe.archived %}<div class="note warn">Ten przepis jest w archiwum – nie ma go na liście przepisów ani przy produkcji.</div>{% endif %}
+  {% if recipe.archived %}<div class="note warn">{{ _('Ten przepis jest w archiwum – nie ma go na liście przepisów ani przy produkcji.') }}</div>{% endif %}
   <form id="delForm" method="post" action="{{ url_for('recipe_delete', recipe_id=recipe_id) }}"
-        onsubmit='return confirm("Usunąć przepis " + {{ recipe.name|tojson }} + "? Tej operacji nie można cofnąć.")'></form>
+        onsubmit='return confirm({{ _("Usunąć przepis {name}? Tej operacji nie można cofnąć.", name=recipe.name)|tojson }})'></form>
 {% endif %}
 
 <form method="post" id="recipeForm" autocomplete="off">
 <div class="cols recipe">
   <div class="side">
     <div class="card">
-      <h2>Przepis</h2>
+      <h2>{{ _('Przepis') }}</h2>
       <div class="fields">
-        <label class="wide">Nazwa <input name="name" value="{{ recipe.name }}" required {{ 'autofocus' if not recipe_id }}></label>
-        <label>Grupa <input name="folder" value="{{ recipe.folder }}" list="recipeFolders" placeholder="np. Finalne"></label>
-        <label>Ocena
+        <label class="wide">{{ _('Nazwa') }} <input name="name" value="{{ recipe.name }}" required {{ 'autofocus' if not recipe_id }}></label>
+        <label>{{ _('Grupa') }} <input name="folder" value="{{ recipe.folder }}" list="recipeFolders" placeholder="{{ _('np. Finalne') }}"></label>
+        <label>{{ _('Ocena') }}
           <select name="rating">
-            {% for n in range(6) %}<option value="{{ n }}" {{ 'selected' if recipe.rating == n }}>{{ '★' * n if n else '– brak –' }}</option>{% endfor %}
+            {% for n in range(6) %}<option value="{{ n }}" {{ 'selected' if recipe.rating == n }}>{{ '★' * n if n else _('– brak –') }}</option>{% endfor %}
           </select>
         </label>
-        <label class="wide">Notatki <textarea name="notes" rows="3">{{ recipe.notes }}</textarea></label>
+        <label class="wide">{{ _('Notatki') }} <textarea name="notes" rows="3">{{ recipe.notes }}</textarea></label>
       </div>
     </div>
 
     <div class="card">
-      <h2>Parametry</h2>
+      <h2>{{ _('Parametry') }}</h2>
       <div class="fields three">
-        <label>Ilość (ml) <input name="amount_ml" value="{{ recipe.amount_ml|num }}" inputmode="decimal"></label>
-        <label>Nikotyna (mg/ml) <input name="nicotine_mg" value="{{ recipe.nicotine_mg|num }}" inputmode="decimal"></label>
-        <label>Dojrzewanie (dni) <input name="steep_days" value="{{ recipe.steep_days }}" inputmode="numeric"></label>
-        <label>PG %
-          <span class="stepper"><button type="button" data-target="pg" data-step="-0.5" title="PG −0,5% (strzałka w dół)">−</button><input name="pg_pct" id="pg_pct" value="{{ recipe.pg_pct|num }}" inputmode="decimal"><button type="button" data-target="pg" data-step="0.5" title="PG +0,5% (strzałka w górę)">+</button></span>
+        <label>{{ _('Ilość (ml)') }} <input name="amount_ml" value="{{ recipe.amount_ml|num }}" inputmode="decimal"></label>
+        <label>{{ _('Nikotyna (mg/ml)') }} <input name="nicotine_mg" value="{{ recipe.nicotine_mg|num }}" inputmode="decimal"></label>
+        <label>{{ _('Dojrzewanie (dni)') }} <input name="steep_days" value="{{ recipe.steep_days }}" inputmode="numeric"></label>
+        <label>{{ _('PG %') }}
+          <span class="stepper"><button type="button" data-target="pg" data-step="-0.5" title="{{ _('PG −0,5% (strzałka w dół)') }}">−</button><input name="pg_pct" id="pg_pct" value="{{ recipe.pg_pct|num }}" inputmode="decimal"><button type="button" data-target="pg" data-step="0.5" title="{{ _('PG +0,5% (strzałka w górę)') }}">+</button></span>
         </label>
-        <label>VG %
-          <span class="stepper"><button type="button" data-target="vg" data-step="-0.5" title="VG −0,5% (strzałka w dół)">−</button><input id="vg_pct" value="{{ recipe.vg_pct|num }}" inputmode="decimal"><button type="button" data-target="vg" data-step="0.5" title="VG +0,5% (strzałka w górę)">+</button></span>
+        <label>{{ _('VG %') }}
+          <span class="stepper"><button type="button" data-target="vg" data-step="-0.5" title="{{ _('VG −0,5% (strzałka w dół)') }}">−</button><input id="vg_pct" value="{{ recipe.vg_pct|num }}" inputmode="decimal"><button type="button" data-target="vg" data-step="0.5" title="{{ _('VG +0,5% (strzałka w górę)') }}">+</button></span>
         </label>
-        <label title="Gdy nie da się uzyskać obu proporcji, najpierw dobijana jest wybrana">Pierwszeństwo
+        <label title="{{ _('Gdy nie da się uzyskać obu proporcji, najpierw dobijana jest wybrana') }}">{{ _('Pierwszeństwo') }}
           <select name="precedence">
             <option value="pg" {{ 'selected' if recipe.precedence != 'vg' }}>PG</option>
             <option value="vg" {{ 'selected' if recipe.precedence == 'vg' }}>VG</option>
           </select>
         </label>
-        <label class="wide">Baza nikotynowa
+        <label class="wide">{{ _('Baza nikotynowa') }}
           <select name="nicotine_id">
-            <option value="">– bez bazy –</option>
+            <option value="">{{ _('– bez bazy –') }}</option>
             {% for o in options.nicotine %}
               <option value="{{ o.id }}" {{ 'selected' if recipe.nicotine_id == o.id }}>{{ o.label }} — {{ o.nicotine_mg|num }} mg, {{ o.pg_pct|num(0) }}/{{ o.vg_pct|num(0) }}</option>
             {% endfor %}
@@ -87,36 +87,36 @@
     </div>
 
     <div class="card">
-      <h2>Aromaty <span class="muted" id="flavorSum"></span></h2>
+      <h2>{{ _('Aromaty') }} <span class="muted" id="flavorSum"></span></h2>
       <table class="grid lines flavorsEdit">
         <tbody id="flavorRows"></tbody>
       </table>
-      <div class="formfoot left"><button type="button" class="btn" id="addFlavor">+ Aromat</button></div>
+      <div class="formfoot left"><button type="button" class="btn" id="addFlavor">{{ _('+ Aromat') }}</button></div>
     </div>
   </div>
 
   <div class="side sticky">
     <div class="card">
-      <h2>Wyliczenie</h2>
-      <div class="measure-toggle" title="Którą wartość odczytujesz przy mieszaniu – zostanie wyróżniona"><button type="button" data-measure="ml">Odmierzam ml</button><button type="button" data-measure="g">Ważę g</button></div>
+      <h2>{{ _('Wyliczenie') }}</h2>
+      <div class="measure-toggle" title="{{ _('Którą wartość odczytujesz przy mieszaniu – zostanie wyróżniona') }}"><button type="button" data-measure="ml">{{ _('Odmierzam ml') }}</button><button type="button" data-measure="g">{{ _('Ważę g') }}</button></div>
       <div id="warnings"></div>
       <table class="grid compact calc">
-        <thead><tr><th>Składnik</th><th class="r">%</th><th class="r v-ml">Objętość</th><th class="r v-g">Waga</th><th class="r v-cum" title="Ile powinna pokazać waga po dodaniu składnika, gdy ważysz wszystko do jednej butelki">Na wadze Σ</th><th class="r">Koszt</th><th class="r">Stan</th></tr></thead>
+        <thead><tr><th>{{ _('Składnik') }}</th><th class="r">%</th><th class="r v-ml">{{ _('Objętość') }}</th><th class="r v-g">{{ _('Waga') }}</th><th class="r v-cum" title="{{ _('Ile powinna pokazać waga po dodaniu składnika, gdy ważysz wszystko do jednej butelki') }}">{{ _('Na wadze Σ') }}</th><th class="r">{{ _('Koszt') }}</th><th class="r">{{ _('Stan') }}</th></tr></thead>
         <tbody id="calcRows"></tbody>
         <tfoot id="calcTotals"></tfoot>
       </table>
       <div class="summary" id="summary"></div>
     </div>
-    <div class="formfoot"><button class="btn primary" id="saveBtn">Zapisz przepis</button></div>
+    <div class="formfoot"><button class="btn primary" id="saveBtn">{{ _('Zapisz przepis') }}</button></div>
 
     {% if history %}
     <div class="card">
-      <h2>Historia</h2>
+      <h2>{{ _('Historia') }}</h2>
       <ul class="history">
         {% for h in history[:12] %}
           <li>{{ h.date[:10] }} · {{ {'made': 'zrobiono', 'printed': 'wydrukowano'}.get(h.event, h.event) }}{% if h.note %} <small>{{ h.note }}</small>{% endif %}</li>
         {% endfor %}
-        {% if history|length > 12 %}<li class="muted">…i {{ history|length - 12 }} wcześniejszych</li>{% endif %}
+        {% if history|length > 12 %}<li class="muted">{{ _('…i {n} wcześniejszych', n=history|length - 12) }}</li>{% endif %}
       </ul>
     </div>
     {% endif %}
@@ -126,9 +126,9 @@
 
 <template id="flavorTpl">
   <tr>
-    <td><input class="flavor-name" list="flavorList" placeholder="zacznij pisać nazwę aromatu…"><input type="hidden" name="flavor_id"></td>
+    <td><input class="flavor-name" list="flavorList" placeholder="{{ _('zacznij pisać nazwę aromatu…') }}"><input type="hidden" name="flavor_id"></td>
     <td style="width:7rem"><div class="unitbox"><input name="flavor_pct" inputmode="decimal"><span class="unit">%</span></div></td>
-    <td style="width:2rem"><button type="button" class="link danger remove" title="Usuń aromat">✕</button></td>
+    <td style="width:2rem"><button type="button" class="link danger remove" title="{{ _('Usuń aromat') }}">✕</button></td>
   </tr>
 </template>
 <datalist id="flavorList">{% for o in options.flavor %}<option value="{{ o.label }}">{% endfor %}</datalist>
@@ -144,9 +144,9 @@
   const form = document.getElementById('recipeForm');
   const tbody = document.getElementById('flavorRows');
   const tpl = document.getElementById('flavorTpl');
-  const fmt = (v, d = 2) => v.toLocaleString('pl-PL', {maximumFractionDigits: d});
-  const money = v => v.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
-  const num = s => { const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(v) ? 0 : v; };
+  const fmt = (v, d = 2) => v.toLocaleString(LOCALE, {maximumFractionDigits: d});
+  const money = v => v.toLocaleString(LOCALE, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
+  const num = num0;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   let dirty = false;
 
@@ -216,7 +216,7 @@
 
   async function compute() {
     const sum = [...tbody.querySelectorAll('[name=flavor_pct]')].reduce((a, i) => a + num(i.value), 0);
-    document.getElementById('flavorSum').textContent = sum ? `· razem ${fmt(sum)}%` : '';
+    document.getElementById('flavorSum').textContent = sum ? '· ' + t('razem {x}%', {x: fmt(sum)}) : '';
     // Przy szybkich zmianach odpowiedzi mogą wrócić w innej kolejności – liczy się tylko najnowsza.
     const seq = ++requestSeq;
     const res = await fetch('{{ url_for("api_compute") }}', {method: 'POST', body: new FormData(form)});
@@ -225,11 +225,11 @@
     if (seq === requestSeq) render(data);
   }
 
-  const ROLE = {nicotine: 'baza', aroma: '', pg: 'PG', vg: 'VG'};
+  const ROLE = {nicotine: t('baza'), aroma: '', pg: 'PG', vg: 'VG'};
   function render(d) {
     const w = [...d.warnings.map(t => ['warn', t])];
-    if (d.missing.length) w.push(['error', 'Brakuje na magazynie: ' + d.missing.map(m => `${esc(m.name)} (${fmt(m.missing)} ml)`).join(', ')]);
-    if (d.no_price && d.no_price.length) w.push(['info', 'Bez ceny (koszt niepełny): ' + d.no_price.map(esc).join(', ')]);
+    if (d.missing.length) w.push(['error', t('Brakuje na magazynie:') + ' ' + d.missing.map(m => `${esc(m.name)} (${fmt(m.missing)} ml)`).join(', ')]);
+    if (d.no_price && d.no_price.length) w.push(['info', t('Bez ceny (koszt niepełny):') + ' ' + d.no_price.map(esc).join(', ')]);
     document.getElementById('warnings').innerHTML = w.map(([k, t]) => `<div class="note ${k}">${t}</div>`).join('');
 
     let cum = 0;
@@ -242,23 +242,23 @@
         <td class="r v-g">${fmt(l.g)}<small> g</small></td>
         <td class="r v-cum">${fmt(cum)}<small> g</small></td>
         <td class="r">${l.cost == null ? '<span class="muted">–</span>' : money(l.cost)}</td>
-        <td class="r ${l.missing ? 'neg' : 'muted'}" title="${l.missing ? 'Brakuje ' + fmt(l.missing, 1) + ' ml' : ''}">${fmt(l.stock, 1)}</td>
+        <td class="r ${l.missing ? 'neg' : 'muted'}" title="${l.missing ? t('Brakuje {x} ml', {x: fmt(l.missing, 1)}) : ''}">${fmt(l.stock, 1)}</td>
       </tr>`)).join('');
-    const t = d.totals;
-    document.getElementById('calcTotals').innerHTML = t.ml ? `
-      <tr><td>Razem</td><td></td><td class="r v-ml">${fmt(t.ml)}<small> ml</small></td><td class="r v-g">${fmt(t.g)}<small> g</small></td><td class="r v-cum"></td><td class="r">${money(t.cost)}</td><td></td></tr>` : '';
-    document.getElementById('summary').innerHTML = t.ml ? `
-      <div><span class="muted">PG/VG</span><strong>${fmt(t.pg_pct, 1)}/${fmt(t.vg_pct, 1)}</strong></div>
-      <div><span class="muted">Nikotyna</span><strong>${fmt(t.nicotine_mg)} mg/ml</strong></div>
-      <div><span class="muted">Aromaty</span><strong>${fmt(t.flavor_pct)}%</strong></div>
-      <div><span class="muted">Koszt / ml</span><strong>${money(t.cost_per_ml)}</strong>${t.cost_complete ? '' : '<small>niepełny</small>'}</div>` : '';
+    const tot = d.totals;
+    document.getElementById('calcTotals').innerHTML = tot.ml ? `
+      <tr><td>${t('Razem')}</td><td></td><td class="r v-ml">${fmt(tot.ml)}<small> ml</small></td><td class="r v-g">${fmt(tot.g)}<small> g</small></td><td class="r v-cum"></td><td class="r">${money(tot.cost)}</td><td></td></tr>` : '';
+    document.getElementById('summary').innerHTML = tot.ml ? `
+      <div><span class="muted">PG/VG</span><strong>${fmt(tot.pg_pct, 1)}/${fmt(tot.vg_pct, 1)}</strong></div>
+      <div><span class="muted">${t('Nikotyna')}</span><strong>${fmt(tot.nicotine_mg)} mg/ml</strong></div>
+      <div><span class="muted">${t('Aromaty')}</span><strong>${fmt(tot.flavor_pct)}%</strong></div>
+      <div><span class="muted">${t('Koszt / ml')}</span><strong>${money(tot.cost_per_ml)}</strong>${tot.cost_complete ? '' : '<small>' + t('niepełny') + '</small>'}</div>` : '';
   }
 
   form.addEventListener('input', changed);
   form.addEventListener('change', changed);
   form.addEventListener('submit', e => {
     const bad = tbody.querySelector('.flavor-name.invalid');
-    if (bad) { e.preventDefault(); alert('Nie rozpoznano aromatu: ' + bad.value + '\nWybierz go z listy podpowiedzi.'); bad.focus(); return; }
+    if (bad) { e.preventDefault(); alert(t('Nie rozpoznano aromatu: {name}', {name: bad.value}) + '\n' + t('Wybierz go z listy podpowiedzi.')); bad.focus(); return; }
     dirty = false;
   });
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });

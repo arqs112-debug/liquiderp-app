@@ -1,80 +1,80 @@
 {% extends "base.html" %}
 {% block back %}{{ url_for('inventory') }}{% endblock %}
-{% block title %}{{ 'Nowy składnik' if is_new else ing.name }}{% endblock %}
+{% block title %}{{ _('Nowy składnik') if is_new else ing.name }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>{% if is_new %}Nowy składnik{% else %}{{ ing.name }}{% if ing.manufacturer %} <span class="muted">· {{ ing.manufacturer }}</span>{% endif %}{% endif %}</h1>
-  <div class="actions"><button class="btn primary" form="ingForm" name="close" value="1" title="Zapisz i wróć do stanów magazynowych"><svg><use href="#i-save"/></svg>{{ 'Utwórz i zamknij' if is_new else 'Zapisz i zamknij' }}</button>
-    {% if not is_new %}<a class="btn" href="{{ url_for('receipt_new', skladnik=ing.id) }}"><svg><use href="#i-in"/></svg>Przyjęcie</a>
-      <a class="btn" href="{{ url_for('shopping', dodaj=ing.id) }}" title="Dodaj do listy zakupów"><svg><use href="#i-cart"/></svg>Do listy zakupów</a>{% endif %}
-    <a class="btn" href="{{ url_for('inventory') }}"><svg><use href="#i-box"/></svg>Stany magazynowe</a></div>
+  <h1>{% if is_new %}{{ _('Nowy składnik') }}{% else %}{{ ing.name }}{% if ing.manufacturer %} <span class="muted">· {{ ing.manufacturer }}</span>{% endif %}{% endif %}</h1>
+  <div class="actions"><button class="btn primary" form="ingForm" name="close" value="1" title="{{ _('Zapisz i wróć do stanów magazynowych') }}"><svg><use href="#i-save"/></svg>{{ _('Utwórz i zamknij') if is_new else _('Zapisz i zamknij') }}</button>
+    {% if not is_new %}<a class="btn" href="{{ url_for('receipt_new', skladnik=ing.id) }}"><svg><use href="#i-in"/></svg>{{ _('Przyjęcie') }}</a>
+      <a class="btn" href="{{ url_for('shopping', dodaj=ing.id) }}" title="{{ _('Dodaj do listy zakupów') }}"><svg><use href="#i-cart"/></svg>{{ _('Do listy zakupów') }}</a>{% endif %}
+    <a class="btn" href="{{ url_for('inventory') }}"><svg><use href="#i-box"/></svg>{{ _('Stany magazynowe') }}</a></div>
 </div>
 
 <div class="cols">
   <form method="post" class="card" id="ingForm" data-dirty-check>
-    <h2>Dane składnika</h2>
+    <h2>{{ _('Dane składnika') }}</h2>
     <div class="fields">
-      <label class="wide">Nazwa <input name="name" value="{{ ing.name }}" required autofocus></label>
-      <label>Kategoria
+      <label class="wide">{{ _('Nazwa') }} <input name="name" value="{{ ing.name }}" required autofocus></label>
+      <label>{{ _('Kategoria') }}
         <select name="category" id="category">
           {% for key, cat in CATEGORIES.items() %}
             <option value="{{ key }}" {{ 'selected' if ing.category == key }}>{{ cat.single }}</option>
           {% endfor %}
         </select>
       </label>
-      <label>Producent <input name="manufacturer" value="{{ ing.manufacturer }}" list="manufacturers"></label>
-      <label>Grupa <input name="folder" value="{{ ing.folder }}" list="folders" placeholder="np. Próbki, Owocowe"></label>
-      <label title="Używana do kosztu, gdy brak ceny z przyjęć na stanie; każde przyjęcie ustawia ją automatycznie">Cena referencyjna ({{ CURRENCY }} / {{ CATEGORIES[ing.category].unit }})
-        <input name="ref_price" value="{{ ing.ref_price|num(4) if ing.ref_price }}" inputmode="decimal" placeholder="np. 1,00"></label>
-      <label data-for="aroma">Domyślny % w przepisie <input name="default_pct" value="{{ ing.default_pct|num if ing.default_pct }}" inputmode="decimal"></label>
-      <label data-for="liquid">PG % <input name="pg_pct" id="pg_pct" value="{{ ing.pg_pct|num }}" inputmode="decimal"></label>
-      <label data-for="liquid">VG % <input name="vg_pct" id="vg_pct" value="{{ ing.vg_pct|num }}" inputmode="decimal"></label>
-      <label data-for="nicotine">Nikotyna mg/ml <input name="nicotine_mg" value="{{ ing.nicotine_mg|num }}" inputmode="decimal"></label>
-      <label data-for="liquid">Gęstość g/ml <input name="grams_per_ml" value="{{ ing.grams_per_ml|num(3) }}" inputmode="decimal"></label>
-      <label data-for="bottle">Pojemność butelki ml <input name="capacity_ml" value="{{ ing.capacity_ml|num if ing.capacity_ml }}" inputmode="decimal"></label>
-      <label>Stan minimalny <input name="min_stock" value="{{ ing.min_stock|num }}" inputmode="decimal" title="Poniżej tej ilości składnik zostanie oznaczony jako „mało”"></label>
-      <label class="wide">Opis / notatki (smak, stężenie startowe w testach…)
+      <label>{{ _('Producent') }} <input name="manufacturer" value="{{ ing.manufacturer }}" list="manufacturers"></label>
+      <label>{{ _('Grupa') }} <input name="folder" value="{{ ing.folder }}" list="folders" placeholder="{{ _('np. Próbki, Owocowe') }}"></label>
+      <label title="{{ _('Używana do kosztu, gdy brak ceny z przyjęć na stanie; każde przyjęcie ustawia ją automatycznie') }}">{{ _('Cena referencyjna (') }}{{ CURRENCY }} / {{ _(CATEGORIES[ing.category].unit) }})
+        <input name="ref_price" value="{{ ing.ref_price|num(4) if ing.ref_price }}" inputmode="decimal" placeholder="{{ _('np. 1,00') }}"></label>
+      <label data-for="aroma">{{ _('Domyślny % w przepisie') }} <input name="default_pct" value="{{ ing.default_pct|num if ing.default_pct }}" inputmode="decimal"></label>
+      <label data-for="liquid">{{ _('PG %') }} <input name="pg_pct" id="pg_pct" value="{{ ing.pg_pct|num }}" inputmode="decimal"></label>
+      <label data-for="liquid">{{ _('VG %') }} <input name="vg_pct" id="vg_pct" value="{{ ing.vg_pct|num }}" inputmode="decimal"></label>
+      <label data-for="nicotine">{{ _('Nikotyna mg/ml') }} <input name="nicotine_mg" value="{{ ing.nicotine_mg|num }}" inputmode="decimal"></label>
+      <label data-for="liquid">{{ _('Gęstość g/ml') }} <input name="grams_per_ml" value="{{ ing.grams_per_ml|num(3) }}" inputmode="decimal"></label>
+      <label data-for="bottle">{{ _('Pojemność butelki ml') }} <input name="capacity_ml" value="{{ ing.capacity_ml|num if ing.capacity_ml }}" inputmode="decimal"></label>
+      <label>{{ _('Stan minimalny') }} <input name="min_stock" value="{{ ing.min_stock|num }}" inputmode="decimal" title="{{ _('Poniżej tej ilości składnik zostanie oznaczony jako „mało”') }}"></label>
+      <label class="wide">{{ _('Opis / notatki (smak, stężenie startowe w testach…)') }}
         <textarea name="description" rows="6">{{ ing.description }}</textarea>
       </label>
       {% if not is_new %}
-        <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if ing.active }}> aktywny (widoczny w magazynie i listach)</label>
+        <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if ing.active }}> {{ _('aktywny (widoczny w magazynie i listach)') }}</label>
       {% endif %}
     </div>
-    <div class="formfoot"><button class="btn primary">{{ 'Utwórz składnik' if is_new else 'Zapisz zmiany' }}</button></div>
+    <div class="formfoot"><button class="btn primary">{{ _('Utwórz składnik') if is_new else _('Zapisz zmiany') }}</button></div>
   </form>
 
   {% if not is_new %}
   <div class="side">
     <div class="card stat">
-      <div><span class="muted">Stan</span><strong class="{{ 'neg' if state.qty < 0 }}">{{ state.qty|num(1) }} {{ unit }}</strong></div>
+      <div><span class="muted">{{ _('Stan') }}</span><strong class="{{ 'neg' if state.qty < 0 }}">{{ state.qty|num(1) }} {{ unit }}</strong></div>
       {% if state.qty > 0 and state.avg %}
-        <div><span class="muted">Śr. koszt</span><strong>{{ state.avg|money }}</strong><small>/{{ unit }}</small></div>
+        <div><span class="muted">{{ _('Śr. koszt') }}</span><strong>{{ state.avg|money }}</strong><small>/{{ unit }}</small></div>
       {% else %}
-        <div><span class="muted">Ostatnia cena</span><strong>{{ ing.ref_price|money if ing.ref_price else '–' }}</strong><small>/{{ unit }}</small></div>
+        <div><span class="muted">{{ _('Ostatnia cena') }}</span><strong>{{ ing.ref_price|money if ing.ref_price else '–' }}</strong><small>/{{ unit }}</small></div>
       {% endif %}
-      <div><span class="muted">Wartość</span><strong>{{ ((state.qty if state.qty > 0 else 0) * state.avg)|money }}</strong></div>
+      <div><span class="muted">{{ _('Wartość') }}</span><strong>{{ ((state.qty if state.qty > 0 else 0) * state.avg)|money }}</strong></div>
     </div>
 
     <form method="post" action="{{ url_for('ingredient_receive', ingredient_id=ing.id) }}" class="card">
-      <h2>Szybkie przyjęcie</h2>
+      <h2>{{ _('Szybkie przyjęcie') }}</h2>
       <div class="fields three">
-        <label>Opakowanie ({{ unit }}) <input name="pack_size" inputmode="decimal" required
+        <label>{{ _('Opakowanie (') }}{{ unit }}) <input name="pack_size" inputmode="decimal" required
                placeholder="{{ '10' if unit == 'ml' else '1' }}"></label>
-        <label>Sztuk <input name="pack_count" value="1" inputmode="numeric" required></label>
-        <label>Cena / opak. ({{ CURRENCY }}) <input name="pack_price" inputmode="decimal"></label>
-        <label>Data <input type="date" name="date" value="{{ today }}"></label>
-        <label class="span2">Sklep <input name="supplier" list="suppliers"></label>
+        <label>{{ _('Sztuk') }} <input name="pack_count" value="1" inputmode="numeric" required></label>
+        <label>{{ _('Cena / opak. (') }}{{ CURRENCY }}) <input name="pack_price" inputmode="decimal"></label>
+        <label>{{ _('Data') }} <input type="date" name="date" value="{{ today }}"></label>
+        <label class="span2">{{ _('Sklep') }} <input name="supplier" list="suppliers"></label>
       </div>
-      <div class="formfoot"><button class="btn primary">Przyjmij</button></div>
+      <div class="formfoot"><button class="btn primary">{{ _('Przyjmij') }}</button></div>
     </form>
 
     <form method="post" action="{{ url_for('ingredient_adjust', ingredient_id=ing.id) }}" class="card">
-      <h2>Korekta stanu (inwentaryzacja)</h2>
+      <h2>{{ _('Korekta stanu (inwentaryzacja)') }}</h2>
       <div class="fields three">
-        <label>Faktyczny stan ({{ unit }}) <input name="actual_qty" inputmode="decimal" required></label>
-        <label class="span2">Powód <input name="note" placeholder="np. rozlane, przeliczone"></label>
+        <label>{{ _('Faktyczny stan (') }}{{ unit }}) <input name="actual_qty" inputmode="decimal" required></label>
+        <label class="span2">{{ _('Powód') }} <input name="note" placeholder="{{ _('np. rozlane, przeliczone') }}"></label>
       </div>
-      <div class="formfoot"><button class="btn">Ustaw stan</button></div>
+      <div class="formfoot"><button class="btn">{{ _('Ustaw stan') }}</button></div>
     </form>
   </div>
   {% endif %}
@@ -82,30 +82,30 @@
 
 {% if not is_new %}
 <section class="card">
-  <h2>Historia</h2>
+  <h2>{{ _('Historia') }}</h2>
   <table class="grid compact">
-    <thead><tr><th>Data</th><th>Rodzaj</th><th>Szczegóły</th><th class="r">Ilość</th><th class="r">Koszt / {{ unit }}</th><th></th></tr></thead>
+    <thead><tr><th>{{ _('Data') }}</th><th>{{ _('Rodzaj') }}</th><th>{{ _('Szczegóły') }}</th><th class="r">{{ _('Ilość') }}</th><th class="r">{{ _('Koszt /') }} {{ unit }}</th><th></th></tr></thead>
     <tbody>
     {% for m in history %}
       <tr>
         <td>{{ m.date }}</td>
-        <td>{{ {'purchase': 'Przyjęcie', 'production': 'Produkcja', 'adjustment': 'Korekta'}[m.kind] }}</td>
-        <td>{% if m.kind == 'purchase' %}{{ m.pack_count }} × {{ m.pack_size|num }} {{ unit }} po {{ (m.unit_cost * m.pack_size)|money }}{% if m.supplier %} · {{ m.supplier }}{% endif %}
-            {% if m.purchase_id %} · <a href="{{ url_for('receipt_view', purchase_id=m.purchase_id) }}">dokument</a>{% endif %}
+        <td>{{ {'purchase': _('Przyjęcie'), 'production': _('Produkcja'), 'adjustment': _('Korekta')}[m.kind] }}</td>
+        <td>{% if m.kind == 'purchase' %}{{ m.pack_count }} × {{ m.pack_size|num }} {{ unit }} {{ _('po') }} {{ (m.unit_cost * m.pack_size)|money }}{% if m.supplier %} · {{ m.supplier }}{% endif %}
+            {% if m.purchase_id %} · <a href="{{ url_for('receipt_view', purchase_id=m.purchase_id) }}">{{ _('dokument') }}</a>{% endif %}
             {% elif m.production_id %}<a href="{{ url_for('production_view', production_id=m.production_id) }}">{{ m.note }}</a>
             {% else %}{{ m.note }}{% endif %}</td>
         <td class="r {{ 'neg' if m.qty < 0 }}">{{ '+' if m.qty > 0 }}{{ m.qty|num(1) }}</td>
         <td class="r">{{ m.unit_cost|money if m.unit_cost is not none else '' }}</td>
         <td class="r">
           {% if not m.production_id %}
-          <form method="post" action="{{ url_for('movement_delete', movement_id=m.id) }}" onsubmit="return confirm('Usunąć ten wpis? Stan i średni koszt zostaną przeliczone.')">
-            <button class="link danger" title="Usuń wpis">usuń</button>
+          <form method="post" action="{{ url_for('movement_delete', movement_id=m.id) }}" onsubmit="return confirm({{ _('Usunąć ten wpis? Stan i średni koszt zostaną przeliczone.')|tojson|forceescape }})">
+            <button class="link danger" title="{{ _('Usuń wpis') }}">{{ _('usuń') }}</button>
           </form>
           {% endif %}
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="6" class="empty">Brak ruchów.</td></tr>
+      <tr><td colspan="6" class="empty">{{ _('Brak ruchów.') }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -135,8 +135,8 @@
   }
   sel.addEventListener('change', () => sync(true));
   // PG i VG uzupełniają się do 100 %.
-  pg.addEventListener('change', () => { const v = parseFloat(pg.value.replace(',', '.')); if (!isNaN(v) && v <= 100) vg.value = 100 - v; });
-  vg.addEventListener('change', () => { const v = parseFloat(vg.value.replace(',', '.')); if (!isNaN(v) && v <= 100) pg.value = 100 - v; });
+  pg.addEventListener('change', () => { const v = parseNum(pg.value); if (!isNaN(v) && v <= 100) vg.value = 100 - v; });
+  vg.addEventListener('change', () => { const v = parseNum(vg.value); if (!isNaN(v) && v <= 100) pg.value = 100 - v; });
   sync(false);
 })();
 </script>

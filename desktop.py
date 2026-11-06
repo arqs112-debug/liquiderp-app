@@ -171,5 +171,6 @@ if __name__ == "__main__":
         main()
     except Exception:
         logging.exception("LiquidERP nie uruchomił się")
-        ctypes.windll.user32.MessageBoxW(None, f"LiquidERP nie uruchomił się.\nSzczegóły: {LOG}", TITLE, 0x10)
+        from i18n import _
+        ctypes.windll.user32.MessageBoxW(None, _("LiquidERP nie uruchomił się.") + "\n" + _("Szczegóły: {path}", path=LOG), TITLE, 0x10)
         raise

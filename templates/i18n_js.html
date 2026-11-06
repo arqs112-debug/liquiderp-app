@@ -1,0 +1,22 @@
+{# Słownik i formaty dla skryptów: t(polski tekst, {param: …}), parseNum, fmtNum, fmtMoney. #}
+window.T = {{ JS_T|tojson }};
+window.LOCALE = {{ JS_LOCALE|tojson }};
+window.DEC = LOCALE === 'pl-PL' ? ',' : '.';
+window.t = (s, p) => {
+  let r = (window.T && window.T[s]) || s;
+  if (p) r = r.replace(/\{(\w+)\}/g, (m, k) => (k in p ? p[k] : m));
+  return r;
+};
+// Liczba wpisana po polsku albo po angielsku: „1 017,52”, „1,017.52”, „12,5”, „12.5”.
+window.parseNum = s => {
+  let x = String(s == null ? '' : s).replace(/[\s\u00a0\u202f']/g, '').replace('−', '-');
+  if (!x) return NaN;
+  if (x.includes(',') && x.includes('.')) x = x.lastIndexOf(',') > x.lastIndexOf('.') ? x.replace(/\./g, '').replace(',', '.') : x.replace(/,/g, '');
+  else if (/^-?[1-9]\d{0,2}(,\d{3})+$/.test(x) && (DEC === '.' || (x.match(/,/g) || []).length > 1)) x = x.replace(/,/g, '');
+  else x = x.replace(',', '.');
+  return parseFloat(x);
+};
+window.num0 = s => { const v = parseNum(s); return isNaN(v) ? 0 : v; };
+window.fmtNum = (v, d = 2) => v.toLocaleString(LOCALE, {maximumFractionDigits: d});
+window.fmtMoney = v => v.toLocaleString(LOCALE, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\u00a0' + CUR;
+window.decStr = v => String(v).replace('.', DEC);  // do wartości pól formularza (bez separatora tysięcy)

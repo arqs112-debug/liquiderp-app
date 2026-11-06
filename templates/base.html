@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl"{% if SETTINGS.theme == 'light' %} data-theme="light"{% endif %} data-measure="{{ 'g' if SETTINGS.measure == 'g' else 'ml' }}">
+<html lang="{{ LANG }}"{% if SETTINGS.theme == 'light' %} data-theme="light"{% endif %} data-measure="{{ 'g' if SETTINGS.measure == 'g' else 'ml' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,6 +9,7 @@
   <script>
     // Zwinięte menu ustawiamy przed narysowaniem strony, żeby nie mrugało (motyw i tryb ml/g są w Ustawieniach).
     window.CUR = {{ CURRENCY|tojson }};
+    {% include "i18n_js.html" %}
     try {
       if (localStorage.getItem('sidebar') === 'collapsed') document.documentElement.classList.add('side-collapsed');
     } catch (e) {}
@@ -58,30 +59,30 @@
     <aside class="sidebar">
       <a class="side-brand" href="{{ url_for('dashboard') }}"><img src="{{ url_for('static', filename='favicon.png') }}" alt=""><span>LiquidERP</span></a>
       {% for group, items in nav if group != 'Ustawienia' %}
-        <div class="side-group">{{ group }}</div>
+        <div class="side-group">{{ _(group) }}</div>
         {% for target, label, icon, eps in items %}
-          <a class="side-link {{ 'on' if ep in eps }}" href="{{ url_for(target) }}" title="{{ label }}"><svg><use href="#{{ icon }}"/></svg><span>{{ label }}</span></a>
+          <a class="side-link {{ 'on' if ep in eps }}" href="{{ url_for(target) }}" title="{{ _(label) }}"><svg><use href="#{{ icon }}"/></svg><span>{{ _(label) }}</span></a>
         {% endfor %}
         {% if group == 'Narzędzia' %}
-          <button type="button" class="side-link" data-report title="Zgłoś błąd albo pomysł"><svg><use href="#i-bubble"/></svg><span>Zgłoś uwagę</span></button>
+          <button type="button" class="side-link" data-report title="{{ _('Zgłoś błąd albo pomysł') }}"><svg><use href="#i-bubble"/></svg><span>{{ _('Zgłoś uwagę') }}</span></button>
         {% endif %}
       {% endfor %}
       <div class="side-bottom">
-        <div class="side-version" title="Wersja programu">wersja {{ VERSION }}</div>
-        <a class="side-link {{ 'on' if ep in ('settings_page', 'import_page', 'backups', 'settings_info') }}" href="{{ url_for('settings_page') }}" title="Ustawienia"><svg><use href="#i-gear"/></svg><span>Ustawienia</span></a>
-        <button type="button" class="side-link side-toggle" id="sideToggle" title="Zwiń / rozwiń menu"><svg><use href="#i-chev"/></svg><span>Zwiń menu</span></button>
+        <div class="side-version" title="{{ _('Wersja programu') }}">{{ _('wersja') }} {{ VERSION }}</div>
+        <a class="side-link {{ 'on' if ep in ('settings_page', 'import_page', 'backups', 'settings_info') }}" href="{{ url_for('settings_page') }}" title="{{ _('Ustawienia') }}"><svg><use href="#i-gear"/></svg><span>{{ _('Ustawienia') }}</span></a>
+        <button type="button" class="side-link side-toggle" id="sideToggle" title="{{ _('Zwiń / rozwiń menu') }}"><svg><use href="#i-chev"/></svg><span>{{ _('Zwiń menu') }}</span></button>
       </div>
     </aside>
     <div class="content">
       <header class="topbar">
-        <div class="crumbs">{% if ns.group %}{{ ns.group }} › {% endif %}<b>{{ self.title() }}</b>{% if self.back() %}<kbd title="Esc wraca do listy">Esc</kbd>{% endif %}</div>
+        <div class="crumbs">{% if ns.group %}{{ _(ns.group) }} › {% endif %}<b>{{ self.title() }}</b>{% if self.back() %}<kbd title="{{ _('Esc wraca do listy') }}">Esc</kbd>{% endif %}</div>
         <form class="globalsearch" action="{{ url_for('search_page') }}" autocomplete="off" role="search">
           <svg><use href="#i-search"/></svg>
-          <input type="search" name="q" id="gq" placeholder="Szukaj wszędzie…  ( / )" value="{{ q if q is defined else '' }}">
+          <input type="search" name="q" id="gq" placeholder="{{ _('Szukaj wszędzie… ( / )') }}" value="{{ q if q is defined else '' }}">
           <div class="gs-results" id="gsResults" hidden></div>
         </form>
-        <button type="button" class="iconbtn" data-report title="Zgłoś uwagę – błąd albo pomysł"><svg><use href="#i-bubble"/></svg></button>
-        <button type="button" class="iconbtn" id="themeToggle" title="Motyw jasny / ciemny"><svg><use href="#i-moon"/></svg></button>
+        <button type="button" class="iconbtn" data-report title="{{ _('Zgłoś uwagę – błąd albo pomysł') }}"><svg><use href="#i-bubble"/></svg></button>
+        <button type="button" class="iconbtn" id="themeToggle" title="{{ _('Motyw jasny / ciemny') }}"><svg><use href="#i-moon"/></svg></button>
       </header>
       <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -95,19 +96,18 @@
   </div>
   <dialog class="modal" id="reportDialog">
     <form method="dialog" id="reportForm" autocomplete="off">
-      <h2>Zgłoś uwagę</h2>
-      <p class="muted hint" style="margin:0 0 .8rem">Otworzy się przeglądarka z gotowym zgłoszeniem na GitHubie
-        (potrzebne darmowe konto). Dopisujemy tylko wersję programu i systemu – żadne dane z Twojego magazynu nie są wysyłane.</p>
+      <h2>{{ _('Zgłoś uwagę') }}</h2>
+      <p class="muted hint" style="margin:0 0 .8rem">{{ _('Otworzy się przeglądarka z gotowym zgłoszeniem na GitHubie (potrzebne darmowe konto). Dopisujemy tylko wersję programu i systemu – żadne dane z Twojego magazynu nie są wysyłane.') }}</p>
       <div class="segmented" role="radiogroup">
-        <label><input type="radio" name="kind" value="bug" checked> Błąd</label>
-        <label><input type="radio" name="kind" value="idea"> Pomysł</label>
+        <label><input type="radio" name="kind" value="bug" checked> {{ _('Błąd') }}</label>
+        <label><input type="radio" name="kind" value="idea"> {{ _('Pomysł') }}</label>
       </div>
-      <label>Tytuł <small class="muted">(opcjonalnie)</small><input name="title" maxlength="120" placeholder="krótko, czego dotyczy"></label>
-      <label>Opis<textarea name="description" rows="6" required placeholder="Co się stało albo co warto dodać? Na którym ekranie?"></textarea></label>
+      <label>{{ _('Tytuł') }} <small class="muted">{{ _('(opcjonalnie)') }}</small><input name="title" maxlength="120" placeholder="{{ _('krótko, czego dotyczy') }}"></label>
+      <label>{{ _('Opis') }}<textarea name="description" rows="6" required placeholder="{{ _('Co się stało albo co warto dodać? Na którym ekranie?') }}"></textarea></label>
       <div class="report-status muted" id="reportStatus"></div>
       <div class="formfoot">
-        <button type="button" class="btn" id="reportCancel">Anuluj</button>
-        <button type="submit" class="btn primary" id="reportSend" value="send">Otwórz zgłoszenie w przeglądarce</button>
+        <button type="button" class="btn" id="reportCancel">{{ _('Anuluj') }}</button>
+        <button type="submit" class="btn primary" id="reportSend" value="send">{{ _('Otwórz zgłoszenie w przeglądarce') }}</button>
       </div>
     </form>
   </dialog>
@@ -153,7 +153,7 @@
         rform.reset(); dlg.close();
       } else {
         rstatus.className = 'report-status';
-        rstatus.innerHTML = 'Nie udało się otworzyć przeglądarki. Skopiuj adres: <input readonly value="">';
+        rstatus.innerHTML = t('Nie udało się otworzyć przeglądarki. Skopiuj adres:') + ' <input readonly value="">';
         rstatus.querySelector('input').value = d.url;
         rstatus.querySelector('input').select();
       }
@@ -163,7 +163,7 @@
   <script>
   (function () {
     const input = document.getElementById('gq'), box = document.getElementById('gsResults');
-    const LABELS = {ingredients: 'Składniki', recipes: 'Przepisy', productions: 'Produkcja', purchases: 'Przyjęcia'};
+    const LABELS = {ingredients: t('Składniki'), recipes: t('Przepisy'), productions: t('Produkcja'), purchases: t('Przyjęcia')};
     const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
     let timer, active = -1;
 
@@ -193,7 +193,7 @@
         `<div class="gs-group">${LABELS[key]}</div>` + items.map(it =>
           `<a href="${it.url}" class="${it.active ? '' : 'inactive'}"><b>${esc(it.title)}</b>` +
           `${it.sub ? `<small>${esc(it.sub)}</small>` : ''}${it.snippet ? `<span>${esc(it.snippet)}</span>` : ''}</a>`).join('')).join('');
-      box.innerHTML = (html || '<div class="gs-empty">Nic nie znaleziono.</div>') +
+      box.innerHTML = (html || '<div class="gs-empty">' + t('Nic nie znaleziono.') + '</div>') +
         `<a href="{{ url_for('search_page') }}?q=${encodeURIComponent(q)}" class="gs-all">Wszystkie wyniki ↵</a>`;
       box.hidden = false;
       active = -1;
@@ -237,14 +237,14 @@
   (function () {
     // Sortowanie list: klik w nagłówek kolumny (rosnąco ↔ malejąco), wybór zapamiętany dla każdej listy.
     // Wartość bierzemy z data-sort komórki albo z pierwszej linii jej tekstu; liczby w formacie „1 017,52 zł” sortują się liczbowo.
-    const NUM = /^[-−]?[\d\s ]+(?:,\d+)?(?=\s|$|[^\d\s,])/;
+    const NUM = DEC === ',' ? /^[-−]?[\d\s ]+(?:,\d+)?(?=\s|$|[^\d\s,])/ : /^[-−]?[\d,]+(?:\.\d+)?(?=\s|$|[^\d,.])/;
     const key = td => {
       if (!td) return null;
       const raw = (td.dataset.sort ?? td.innerText.split('\n')[0]).trim();
       if (!raw || raw === '–' || raw === '-') return null;
       if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw;  // daty ISO sortują się jako tekst
       const m = raw.match(NUM);
-      if (m && /\d/.test(m[0])) return parseFloat(m[0].replace(/[\s ]/g, '').replace('−', '-').replace(',', '.'));
+      if (m && /\d/.test(m[0])) return parseFloat(m[0].replace(/[\s ]/g, '').replace('−', '-').replace(DEC === ',' ? ',' : /,/g, DEC === ',' ? '.' : ''));
       return raw.toLowerCase();
     };
     const compare = (a, b) => {
@@ -276,7 +276,7 @@
       ths.forEach((th, col) => {
         if (!th.textContent.trim() || th.hasAttribute('data-nosort')) return;
         th.classList.add('sortable');
-        th.title = 'Sortuj (klik: rosnąco / malejąco)';
+        th.title = t('Sortuj (klik: rosnąco / malejąco)');
         th.addEventListener('click', () => {
           const cur = th.getAttribute('aria-sort');
           // liczby i daty zwykle chcemy najpierw malejąco, tekst rosnąco

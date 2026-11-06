@@ -16,6 +16,8 @@ from fpdf import FPDF
 from fpdf.fonts import FontFace
 
 import db
+import i18n
+from i18n import _
 
 FILE_NAME = "LiquidERP na telefon.pdf"
 PAGE = (90, 170)          # mm – proporcje ekranu telefonu
@@ -35,17 +37,16 @@ def target_path():
     folder = settings.get("phone_pdf_dir").strip()
     if not folder or not os.path.isdir(folder):
         return None
-    return os.path.join(folder, FILE_NAME)
+    return os.path.join(folder, _(FILE_NAME))
 
 
 def _num(value, digits=1):
-    text = f"{value:,.{digits}f}".replace(",", " ").replace(".", ",")
-    return text.rstrip("0").rstrip(",") if "," in text else text
+    return i18n.fmt_num(value, digits)
 
 
 def _money(value):
     import settings
-    return f"{value:,.2f}".replace(",", " ").replace(".", ",") + " " + settings.get("currency")
+    return i18n.fmt_money(value, settings.get("currency"))
 
 
 class PhonePDF(FPDF):
@@ -62,7 +63,7 @@ class PhonePDF(FPDF):
         self.set_y(-MARGIN - 3)
         self.set_font("Segoe", size=6)
         self.set_text_color(*GREY)
-        self.cell(0, 3, f"LiquidERP · {self.stamp} · str. {self.page_no()}/{{nb}}", align="C")
+        self.cell(0, 3, _("LiquidERP · {stamp} · str. {page}/{total}", stamp=self.stamp, page=self.page_no(), total="{nb}"), align="C")
 
     def heading(self, text, link=None):
         if self.get_y() > self.h - 30:
@@ -104,17 +105,17 @@ class PhonePDF(FPDF):
 def build(conn):
     from app import ingredient_rows  # te same wyliczenia stanów co w programie
     rows = ingredient_rows(conn)       # tylko aktywne
-    stamp = datetime.now().strftime("%d.%m.%Y %H:%M")
+    stamp = datetime.now().strftime("%d.%m.%Y %H:%M" if i18n.current() == "pl" else "%Y-%m-%d %H:%M")
     pdf = PhonePDF(stamp)
     pdf.alias_nb_pages()
-    pdf.set_title("LiquidERP – stany i lista zakupów")
+    pdf.set_title(_("LiquidERP – stany i lista zakupów"))
     pdf.add_page()
 
     pdf.set_font("Segoe", "B", 15)
     pdf.cell(0, 8, "LiquidERP", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Segoe", size=8)
     pdf.set_text_color(*MUTED)
-    pdf.cell(0, 4, f"Stan na {stamp}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 4, _("Stan na {stamp}", stamp=stamp), new_x="LMARGIN", new_y="NEXT")
     pdf.set_text_color(0, 0, 0)
 
     shopping = conn.execute(
@@ -122,20 +123,23 @@ def build(conn):
         " LEFT JOIN ingredients i ON i.id = s.ingredient_id WHERE s.done_at IS NULL"
         " ORDER BY i.manufacturer, lower(COALESCE(i.name, s.name))").fetchall()
     aromas = [r for r in rows if r["category"] == "aroma"]
-    manufacturers = sorted({r["manufacturer"] or "bez producenta" for r in aromas}, key=str.lower)
+    no_man = _("bez producenta")
+    shop_title = _("Lista zakupów")
+    sections = [(cat, _(label)) for cat, label in SECTIONS]
+    manufacturers = sorted({r["manufacturer"] or no_man for r in aromas}, key=str.lower)
 
     # Spis treści z odnośnikami – na telefonie szybciej niż przewijanie.
     links = {}
-    entries = [("Lista zakupów", len(shopping), "poz."), *[(m, sum(1 for r in aromas if (r["manufacturer"] or "bez producenta") == m), "")
+    entries = [(shop_title, len(shopping), _("poz.")), *[(m, sum(1 for r in aromas if (r["manufacturer"] or no_man) == m), "")
                                                            for m in manufacturers],
-               *[(label, sum(1 for r in rows if r["category"] == cat), "") for cat, label in SECTIONS
+               *[(label, sum(1 for r in rows if r["category"] == cat), "") for cat, label in sections
                  if any(r["category"] == cat for r in rows)]]
     pdf.ln(2)
     pdf.set_font("Segoe", size=10)
     for title, count, unit in entries:
         links[title] = pdf.add_link()
         pdf.set_text_color(*ACCENT)
-        label = f"{'Aromaty ' + title if title in manufacturers else title}"
+        label = _("Aromaty {m}", m=title) if title in manufacturers else title
         pdf.cell(65, 6.5, label, link=links[title])
         pdf.set_text_color(*MUTED)
         pdf.cell(0, 6.5, f"{count} {unit}".strip(), align="R", new_x="LMARGIN", new_y="NEXT")
@@ -143,39 +147,39 @@ def build(conn):
     if low:
         pdf.ln(1)
         pdf.set_text_color(*RED)
-        pdf.multi_cell(0, 4.5, f"Poniżej minimum: {', '.join(r['name'] for r in low)}")
+        pdf.multi_cell(0, 4.5, _("Poniżej minimum: {names}", names=", ".join(r["name"] for r in low)))
     pdf.set_text_color(0, 0, 0)
 
     # 1. Lista zakupów
-    pdf.heading("Lista zakupów", links["Lista zakupów"])
+    pdf.heading(shop_title, links[shop_title])
     if shopping:
         items = []
         for s in shopping:
-            unit = db.CATEGORIES[s["category"]]["unit"] if s["category"] else ""
+            unit = _(db.CATEGORIES[s["category"]]["unit"]) if s["category"] else ""
             pack = f"{_num(s['pack_size'])} {unit} × {s['pack_count']}" if s["pack_size"] else f"× {s['pack_count']}"
             items.append((s["ing_name"] or s["name"], s["manufacturer"] or "", pack, None))
         pdf.rows(items)
     else:
         pdf.set_font("Segoe", size=9)
         pdf.set_text_color(*MUTED)
-        pdf.cell(0, 6, "Lista jest pusta.", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, _("Lista jest pusta."), new_x="LMARGIN", new_y="NEXT")
         pdf.set_text_color(0, 0, 0)
 
     def stock_rows(items):
         out = []
         for r in sorted(items, key=lambda r: r["name"].lower()):
             color = RED if r["low"] or r["qty"] < 0 else (GREY if r["qty"] <= 0 else None)
-            note = f"min. {_num(r['min_stock'])} {r['unit']}" if r["low"] else ""
+            note = _("min. {x} {unit}", x=_num(r["min_stock"]), unit=r["unit"]) if r["low"] else ""
             out.append((r["name"], note, f"{_num(r['qty'])} {r['unit']}", color))
         return out
 
     # 2. Aromaty wg producenta
     for m in manufacturers:
-        pdf.heading(f"Aromaty {m}", links[m])
-        pdf.rows(stock_rows(r for r in aromas if (r["manufacturer"] or "bez producenta") == m))
+        pdf.heading(_("Aromaty {m}", m=m), links[m])
+        pdf.rows(stock_rows(r for r in aromas if (r["manufacturer"] or no_man) == m))
 
     # 3. Pozostałe kategorie
-    for cat, label in SECTIONS:
+    for cat, label in sections:
         items = [r for r in rows if r["category"] == cat]
         if items:
             pdf.heading(label, links[label])

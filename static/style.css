@@ -388,3 +388,7 @@ button.side-link { width: calc(100% - .8rem); background: none; border-top: 0; b
 .tabs a:hover { color: var(--text); text-decoration: none; }
 .tabs a.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 .tabs a.on svg { color: var(--accent); }
+.wizard-lang { margin-left: auto; display: flex; gap: .2rem; font-size: .85rem; font-weight: 400; }
+.wizard-lang a { padding: .25rem .6rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); }
+.wizard-lang a.on { border-color: var(--accent); color: var(--text); }
+.wizard-lang a:hover { text-decoration: none; color: var(--text); }

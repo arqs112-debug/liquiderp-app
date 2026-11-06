@@ -1,6 +1,9 @@
 """Produkcja liquidu: podgląd z walidacją stanów, zapis rozchodów i cofnięcie."""
 import calc
+import settings
 import db
+import i18n
+from i18n import _
 
 
 class ProductionError(Exception):
@@ -31,7 +34,7 @@ def params_from_form(form):
 def load_recipe(conn, recipe_id):
     row = conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
     if row is None:
-        raise ProductionError("Wybierz przepis.")
+        raise ProductionError(_("Wybierz przepis."))
     flavors = [(r["ingredient_id"], r["pct"]) for r in conn.execute(
         "SELECT ingredient_id, pct FROM recipe_flavors WHERE recipe_id = ? ORDER BY position", (recipe_id,))]
     return dict(row), flavors
@@ -63,13 +66,14 @@ def preview(conn, params):
         bottle_lines.append(line)
         bottle_cost += line["cost"]
         if line["missing"]:
-            result["missing"].append({"name": ing["name"], "missing": line["missing"], "unit": "szt"})
+            result["missing"].append({"name": ing["name"], "missing": line["missing"], "unit": _("szt")})
         if not price:
             result["no_price"].append(ing["name"])
 
     capacity = sum((b["capacity_ml"] or 0) * b["count"] for b in bottle_lines)
     if bottle_lines and capacity and capacity < result["totals"].get("ml", 0) - 1e-9:
-        result["warnings"].append(f"Butelki pomieszczą {capacity:g} ml, a robisz {result['totals']['ml']:g} ml.")
+        result["warnings"].append(_("Butelki pomieszczą {cap} ml, a robisz {ml} ml.", cap=i18n.fmt_num(capacity),
+                                    ml=i18n.fmt_num(result["totals"]["ml"])))
 
     totals = result["totals"]
     totals["cost_liquid"] = totals.get("cost", 0)
@@ -83,14 +87,14 @@ def preview(conn, params):
 def commit(conn, params):
     result = preview(conn, params)
     if not result["lines"]:
-        raise ProductionError("Nie ma czego produkować – sprawdź ilość i przepis.")
-    blocking = [w for w in result["warnings"] if w.startswith(("Wybierz", "Baza i aromaty", "Wybrana baza"))]
+        raise ProductionError(_("Nie ma czego produkować – sprawdź ilość i przepis."))
+    blocking = result.get("blocking", [])
     if blocking:
         raise ProductionError(" ".join(blocking))
     if result["missing"] and not params["force"]:
-        raise ProductionError("Brakuje składników na magazynie: " + ", ".join(
-            f"{m['name']} ({m['missing']:.2f} {m.get('unit', 'ml')})" for m in result["missing"]) +
-            ". Uzupełnij stany albo zaznacz „produkuj mimo braków”.")
+        raise ProductionError(_("Brakuje składników na magazynie: {items}. Uzupełnij stany albo zaznacz „produkuj mimo braków”.",
+                                items=", ".join(f"{m['name']} ({i18n.fmt_num(m['missing'])} {m.get('unit', 'ml')})"
+                                                for m in result["missing"])))
 
     rec, totals = result["recipe"], result["totals"]
     production_id = conn.execute(
@@ -99,7 +103,7 @@ def commit(conn, params):
         (rec["id"], rec["name"], params["date"], totals["ml"], totals["nicotine_mg"], totals["pg_pct"],
          totals["vg_pct"], totals["cost"], params["note"], 1 if result["missing"] else 0),
     ).lastrowid
-    note = f"Produkcja: {rec['name']} ({totals['ml']:g} ml)"
+    note = _("Produkcja: {name} ({ml} ml)", name=rec["name"], ml=f"{totals['ml']:g}")
     rows = [(l["ingredient_id"], -l["ml"], (l["cost"] / l["ml"]) if l["cost"] and l["ml"] else None)
             for l in result["lines"]]
     rows += [(b["ingredient_id"], -b["count"], b["unit_cost"] or None) for b in result["bottles"]]
@@ -112,7 +116,7 @@ def commit(conn, params):
                      (rec["pg_pct"], rec["vg_pct"], rec["id"]))
     conn.execute(
         "INSERT INTO recipe_history (recipe_id, date, event, note, production_id) VALUES (?, ?, 'made', ?, ?)",
-        (rec["id"], params["date"], f"{totals['ml']:g} ml · {totals['cost']:.2f} zł".replace(".", ","),
+        (rec["id"], params["date"], f"{i18n.fmt_num(totals['ml'])} ml · {i18n.fmt_money(totals['cost'], settings.get('currency'))}",
          production_id))
     return production_id, result
 

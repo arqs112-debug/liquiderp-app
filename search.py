@@ -5,6 +5,7 @@ Ignoruje wielkość liter i polskie znaki („jablko” znajdzie „Jabłko”);
 import unicodedata
 
 import db
+from i18n import _
 
 
 def fold(text):
@@ -25,10 +26,10 @@ def search(conn, query, limit=None):
 
     for ing in conn.execute("SELECT * FROM ingredients ORDER BY active DESC, lower(name)"):
         if _matches(words, ing["name"], ing["manufacturer"], ing["folder"], ing["description"],
-                    db.CATEGORIES[ing["category"]]["single"]):
+                    _(db.CATEGORIES[ing["category"]]["single"])):
             groups["ingredients"].append({
                 "id": ing["id"], "title": ing["name"], "active": bool(ing["active"]),
-                "sub": " · ".join(x for x in (ing["manufacturer"], db.CATEGORIES[ing["category"]]["single"], ing["folder"]) if x),
+                "sub": " · ".join(x for x in (ing["manufacturer"], _(db.CATEGORIES[ing["category"]]["single"]), ing["folder"]) if x),
                 "snippet": ing["description"][:140]})
 
     flavors = {}
@@ -40,7 +41,7 @@ def search(conn, query, limit=None):
         if _matches(words, r["name"], r["folder"], r["notes"], *flav):
             groups["recipes"].append({
                 "id": r["id"], "title": r["name"], "active": not r["archived"],
-                "sub": " · ".join(x for x in ("archiwum" if r["archived"] else "", r["folder"],
+                "sub": " · ".join(x for x in (_("archiwum") if r["archived"] else "", r["folder"],
                                               f"{r['nicotine_mg']:g} mg", "★" * r["rating"]) if x),
                 "snippet": ", ".join(flav)[:140]})
 
@@ -58,7 +59,7 @@ def search(conn, query, limit=None):
         names = items.get(p["id"], [])
         if _matches(words, p["supplier"], p["note"], p["date"], *names):
             groups["purchases"].append({
-                "id": p["id"], "title": f"Przyjęcie {p['date']}" + (f" – {p['supplier']}" if p["supplier"] else ""),
+                "id": p["id"], "title": _("Przyjęcie {date}", date=p["date"]) + (f" – {p['supplier']}" if p["supplier"] else ""),
                 "active": True, "sub": p["note"], "snippet": ", ".join(names)[:140]})
 
     if limit:

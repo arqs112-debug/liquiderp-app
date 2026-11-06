@@ -6,6 +6,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 import db
+from i18n import _
 
 TYPE_MAP = {"Flavor": "aroma", "Nicotine": "nicotine", "PGEntry": "pg", "VGEntry": "vg"}
 OPENING_NOTE = "Bilans otwarcia – import z EJuiceCalculatora"
@@ -46,13 +47,13 @@ def import_file(conn, path, replace=False):
     try:
         root = ET.parse(path).getroot()
     except (OSError, ET.ParseError) as exc:
-        raise ImportError_(f"Nie można odczytać pliku: {exc}") from exc
+        raise ImportError_(_("Nie można odczytać pliku: {err}", err=exc)) from exc
     if root.tag != "JuiceData":
-        raise ImportError_("To nie jest plik danych EJuiceCalculatora (brak <JuiceData>).")
+        raise ImportError_(_("To nie jest plik danych EJuiceCalculatora (brak <JuiceData>)."))
 
     has_data = conn.execute("SELECT EXISTS (SELECT 1 FROM ingredients)").fetchone()[0]
     if has_data and not replace:
-        raise ImportError_("Baza LiquidERP nie jest pusta. Zaznacz „zastąp istniejące dane”, aby zaimportować od nowa.")
+        raise ImportError_(_("Baza LiquidERP nie jest pusta. Zaznacz „zastąp istniejące dane”, aby zaimportować od nowa."))
     if has_data:
         wipe(conn)
 
@@ -61,7 +62,7 @@ def import_file(conn, path, replace=False):
     opening_lines = []
 
     for el in root.iterfind("AllAvailableIngredients/Ingredient"):
-        category, _, _ = _key(el)
+        category = _key(el)[0]
         cost, cost_amount = _num(el, "Cost"), _num(el, "CostMLs", 0)
         if _text(el, "CostType") == "Liters":
             cost_amount *= 1000

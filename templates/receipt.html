@@ -1,51 +1,50 @@
 {% extends "base.html" %}
 {% block back %}{{ url_for('receipts') }}{% endblock %}
-{% block title %}Przyjęcie{% endblock %}
+{% block title %}{{ _('Przyjęcie') }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>Przyjęcie na magazyn</h1>
-  <div class="actions"><button class="btn primary" form="receipt"><svg><use href="#i-save"/></svg>Zapisz przyjęcie</button>
-    <button type="button" class="btn" id="mailToggle"><svg><use href="#i-mail"/></svg>Wklej z maila</button>
-    <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>Historia przyjęć</a></div>
+  <h1>{{ _('Przyjęcie na magazyn') }}</h1>
+  <div class="actions"><button class="btn primary" form="receipt"><svg><use href="#i-save"/></svg>{{ _('Zapisz przyjęcie') }}</button>
+    <button type="button" class="btn" id="mailToggle"><svg><use href="#i-mail"/></svg>{{ _('Wklej z maila') }}</button>
+    <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>{{ _('Historia przyjęć') }}</a></div>
 </div>
 
 <div class="card" id="mailBox" hidden>
-  <h2>Przyjęcie z maila</h2>
-  <p class="muted hint" style="margin:0 0 .6rem">Otwórz w poczcie potwierdzenie zamówienia, zaznacz całą treść (Ctrl+A), skopiuj (Ctrl+C)
-    i wklej tutaj. Program wypełni formularz poniżej – sprawdzisz go przed zapisem.</p>
-  <textarea id="mailText" rows="7" placeholder="Wklej treść maila z potwierdzeniem zamówienia…"></textarea>
+  <h2>{{ _('Przyjęcie z maila') }}</h2>
+  <p class="muted hint" style="margin:0 0 .6rem">{{ _('Otwórz w poczcie potwierdzenie zamówienia, zaznacz całą treść (Ctrl+A), skopiuj (Ctrl+C) i wklej tutaj. Program wypełni formularz poniżej – sprawdzisz go przed zapisem.') }}</p>
+  <textarea id="mailText" rows="7" placeholder="{{ _('Wklej treść maila z potwierdzeniem zamówienia…') }}"></textarea>
   <div class="formfoot" style="justify-content:space-between;align-items:center">
     <span id="mailStatus" class="muted"></span>
-    <button type="button" class="btn primary" id="mailParse">Rozpoznaj pozycje</button>
+    <button type="button" class="btn primary" id="mailParse">{{ _('Rozpoznaj pozycje') }}</button>
   </div>
 </div>
 
 <form method="post" class="card" id="receipt" autocomplete="off" data-dirty-check>
   <div class="fields three">
-    <label>Data <input type="date" name="date" value="{{ today }}"></label>
-    <label>Sklep <input name="supplier" list="suppliers" placeholder="np. Aromatyczne.pl"></label>
-    <label>Uwagi <input name="note" placeholder="nr zamówienia, kod rabatowy…"></label>
+    <label>{{ _('Data') }} <input type="date" name="date" value="{{ today }}"></label>
+    <label>{{ _('Sklep') }} <input name="supplier" list="suppliers" placeholder="{{ _('np. Aromatyczne.pl') }}"></label>
+    <label>{{ _('Uwagi') }} <input name="note" placeholder="{{ _('nr zamówienia, kod rabatowy…') }}"></label>
   </div>
 
   <table class="grid lines">
     <thead>
       <tr>
-        <th style="width:9rem">Kategoria</th><th>Nazwa</th><th style="width:11rem">Producent</th>
-        <th class="r" style="width:7rem">Opakowanie</th><th class="r" style="width:5rem">Sztuk</th>
-        <th class="r" style="width:7rem">Cena / opak.</th><th class="r" style="width:7rem">Razem</th><th style="width:2rem"></th>
+        <th style="width:9rem">{{ _('Kategoria') }}</th><th>{{ _('Nazwa') }}</th><th style="width:11rem">{{ _('Producent') }}</th>
+        <th class="r" style="width:7rem">{{ _('Opakowanie') }}</th><th class="r" style="width:5rem">{{ _('Sztuk') }}</th>
+        <th class="r" style="width:7rem">{{ _('Cena / opak.') }}</th><th class="r" style="width:7rem">{{ _('Razem') }}</th><th style="width:2rem"></th>
       </tr>
     </thead>
     <tbody id="lines"></tbody>
     <tfoot>
       <tr>
-        <td colspan="6"><button type="button" class="btn" id="addLine">+ Pozycja</button>
-          <span class="muted hint">Nowa nazwa = nowy składnik (aromat domyślnie 100% PG). Ilość = opakowanie × sztuk.</span></td>
+        <td colspan="6"><button type="button" class="btn" id="addLine">{{ _('+ Pozycja') }}</button>
+          <span class="muted hint">{{ _('Nowa nazwa = nowy składnik (aromat domyślnie 100% PG). Ilość = opakowanie × sztuk.') }}</span></td>
         <td class="r"><strong id="grand">0,00 {{ CURRENCY }}</strong></td><td></td>
       </tr>
     </tfoot>
   </table>
 
-  <div class="formfoot"><button class="btn primary">Zapisz przyjęcie</button></div>
+  <div class="formfoot"><button class="btn primary">{{ _('Zapisz przyjęcie') }}</button></div>
 </form>
 
 <template id="lineTpl">
@@ -53,14 +52,14 @@
     <td><select name="category">
       {% for key, cat in CATEGORIES.items() %}<option value="{{ key }}">{{ cat.single }}</option>{% endfor %}
     </select></td>
-    <td><div class="namebox"><input name="name" placeholder="nazwa"><span class="tag status"></span></div>
+    <td><div class="namebox"><input name="name" placeholder="{{ _('nazwa') }}"><span class="tag status"></span></div>
       <input type="hidden" name="source_name"><div class="source desc"></div></td>
     <td><input name="manufacturer" list="manufacturers"></td>
     <td class="r"><div class="unitbox"><input name="pack_size" inputmode="decimal"><span class="unit">ml</span></div></td>
     <td><input name="pack_count" value="1" inputmode="numeric" class="r"></td>
     <td><div class="unitbox"><input name="pack_price" inputmode="decimal"><span class="unit">{{ CURRENCY }}</span></div></td>
     <td class="r line-total">–</td>
-    <td><button type="button" class="link danger remove" title="Usuń pozycję">✕</button></td>
+    <td><button type="button" class="link danger remove" title="{{ _('Usuń pozycję') }}">✕</button></td>
   </tr>
 </template>
 
@@ -79,8 +78,8 @@
   const CATS = {{ CATEGORIES|tojson }};
   const tbody = document.getElementById('lines');
   const tpl = document.getElementById('lineTpl');
-  const num = s => { const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(v) ? 0 : v; };
-  const money = v => v.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
+  const num = num0;
+  const money = v => v.toLocaleString(LOCALE, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
   const key = s => s.trim().toLowerCase();
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 
@@ -104,9 +103,9 @@
     tr.querySelector('.unit').textContent = CATS[cat].unit;
     const status = tr.querySelector('.status');
     if (!f.name.value.trim()) { status.textContent = ''; status.className = 'tag status'; }
-    else if (match(tr) && tr.dataset.check) { status.textContent = 'sprawdź'; status.className = 'tag status warn'; }
-    else if (match(tr)) { status.textContent = 'w magazynie'; status.className = 'tag status ok'; }
-    else { status.textContent = 'nowy'; status.className = 'tag status new'; }
+    else if (match(tr) && tr.dataset.check) { status.textContent = t('sprawdź'); status.className = 'tag status warn'; }
+    else if (match(tr)) { status.textContent = t('w magazynie'); status.className = 'tag status ok'; }
+    else { status.textContent = t('nowy'); status.className = 'tag status new'; }
     const total = num(f.pack_count.value) * num(f.pack_price.value);
     tr.querySelector('.line-total').textContent = total ? money(total) : '–';
     let sum = 0;
@@ -122,8 +121,8 @@
     if (same.length === 1 && !f.manufacturer.value) f.manufacturer.value = same[0].manufacturer;
     const m = match(tr);
     if (m && LAST[m.id]) {
-      if (!f.pack_size.value) f.pack_size.value = String(LAST[m.id].size).replace('.', ',');
-      if (!f.pack_price.value) f.pack_price.value = LAST[m.id].price.toFixed(2).replace('.', ',');
+      if (!f.pack_size.value) f.pack_size.value = String(LAST[m.id].size).replace('.', DEC);
+      if (!f.pack_price.value) f.pack_price.value = LAST[m.id].price.toFixed(2).replace('.', DEC);
     }
     // Dopisz pustą pozycję, gdy wypełniono ostatnią.
     if (tr === tbody.lastElementChild && f.name.value.trim()) addLine(cat);
@@ -136,11 +135,11 @@
     f.category.value = cat || 'aroma';
     if (ing) { f.category.value = ing.category; f.name.value = ing.name; f.manufacturer.value = ing.manufacturer; }
     if (extra) {
-      if (extra.pack_size) f.pack_size.value = String(extra.pack_size).replace('.', ',');
+      if (extra.pack_size) f.pack_size.value = String(extra.pack_size).replace('.', DEC);
       f.pack_count.value = extra.pack_count || 1;
-      if (extra.pack_price != null) f.pack_price.value = extra.pack_price.toFixed(2).replace('.', ',');
+      if (extra.pack_price != null) f.pack_price.value = extra.pack_price.toFixed(2).replace('.', DEC);
       f.source_name.value = extra.source_name || '';
-      tr.querySelector('.source').textContent = extra.source_name ? 'z maila: ' + extra.source_name : '';
+      tr.querySelector('.source').textContent = extra.source_name ? t('z maila:') + ' ' + extra.source_name : '';
       tr.querySelector('.source').title = extra.source_name || '';
       if (extra.match === 'fuzzy') tr.dataset.check = '1';
     }
@@ -173,7 +172,7 @@
     const res = await fetch('{{ url_for("api_receipt_from_mail") }}', {method: 'POST', body});
     const d = await res.json();
     if (!d.lines.length) {
-      mailStatus.textContent = 'Nie znalazłem pozycji zamówienia. Sprawdź, czy skopiowana jest tabela z produktami.';
+      mailStatus.textContent = t('Nie znaleziono pozycji zamówienia. Sprawdź, czy skopiowana jest tabela z produktami.');
       mailStatus.className = 'neg';
       return;
     }
@@ -187,15 +186,15 @@
     form.dispatchEvent(new Event('change'));  // niezapisane – Esc zapyta przed wyjściem
     const counts = {fuzzy: 0, new: 0};
     d.lines.forEach(l => { if (l.match in counts) counts[l.match]++; });
-    let msg = `Rozpoznano ${d.lines.length} poz. na ${money(d.items_total)}`;
-    if (d.total != null && Math.abs(d.total - d.items_total) > 0.01) msg += ` (w mailu razem ${money(d.total)} – sprawdź wysyłkę lub rabat)`;
-    if (counts.new) msg += ` · nowe: ${counts.new}`;
-    if (counts.fuzzy) msg += ` · do sprawdzenia: ${counts.fuzzy}`;
+    let msg = t('Rozpoznano {n} poz. na {x}', {n: d.lines.length, x: money(d.items_total)});
+    if (d.total != null && Math.abs(d.total - d.items_total) > 0.01) msg += ' ' + t('(w mailu razem {x} – sprawdź wysyłkę lub rabat)', {x: money(d.total)});
+    if (counts.new) msg += ' · ' + t('nowe: {n}', {n: counts.new});
+    if (counts.fuzzy) msg += ' · ' + t('do sprawdzenia: {n}', {n: counts.fuzzy});
     mailStatus.textContent = '';
     mailBox.hidden = true;
-    document.getElementById('mailToggle').textContent = 'Wklej z maila (' + d.lines.length + ' poz.)';
+    document.getElementById('mailToggle').textContent = t('Wklej z maila ({n} poz.)', {n: d.lines.length});
     form.querySelectorAll('.mailnote').forEach(n => n.remove());
-    form.insertAdjacentHTML('afterbegin', `<div class="note mailnote ${counts.fuzzy ? 'warn' : 'info'}">${esc(msg)}. Sprawdź i zapisz.</div>`);
+    form.insertAdjacentHTML('afterbegin', `<div class="note mailnote ${counts.fuzzy ? 'warn' : 'info'}">${esc(msg)}. ${t('Sprawdź i zapisz.')}</div>`);
   });
 
   document.getElementById('addLine').addEventListener('click', () => {
@@ -208,7 +207,7 @@
       const f = field(tr);
       return f.name.value.trim() && (num(f.pack_size.value) <= 0 || num(f.pack_count.value) <= 0);
     });
-    if (bad.length) { e.preventDefault(); alert('Uzupełnij pojemność opakowania i liczbę sztuk.'); field(bad[0]).pack_size.focus(); }
+    if (bad.length) { e.preventDefault(); alert(t('Uzupełnij pojemność opakowania i liczbę sztuk.')); field(bad[0]).pack_size.focus(); }
   });
 
   const pre = ING.find(i => i.id === {{ preselect|tojson }});

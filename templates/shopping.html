@@ -1,29 +1,29 @@
 {% extends "base.html" %}
-{% block title %}Lista zakupów{% endblock %}
+{% block title %}{{ _('Lista zakupów') }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>Lista zakupów</h1>
+  <h1>{{ _('Lista zakupów') }}</h1>
   <div class="actions">
-    <button type="button" class="btn primary" id="copyList" {{ 'disabled' if not items }} title="Kopiuje listę jako tekst – do wklejenia w notatkę, maila albo komunikator"><svg><use href="#i-list"/></svg>Kopiuj listę</button>
+    <button type="button" class="btn primary" id="copyList" {{ 'disabled' if not items }} title="{{ _('Kopiuje listę jako tekst – do wklejenia w notatkę, maila albo komunikator') }}"><svg><use href="#i-list"/></svg>{{ _('Kopiuj listę') }}</button>
     <form method="post" action="{{ url_for('shopping_add_low') }}" style="display:contents">
-      <button class="btn" {{ 'disabled' if not low_count }}><svg><use href="#i-alert"/></svg>Dodaj braki{% if low_count %} ({{ low_count }}){% endif %}</button>
+      <button class="btn" {{ 'disabled' if not low_count }}><svg><use href="#i-alert"/></svg>{{ _('Dodaj braki') }}{% if low_count %} ({{ low_count }}){% endif %}</button>
     </form>
     {% if done %}
-      <form method="post" action="{{ url_for('shopping_clear_done') }}" style="display:contents"><button class="btn">Wyczyść kupione</button></form>
+      <form method="post" action="{{ url_for('shopping_clear_done') }}" style="display:contents"><button class="btn">{{ _('Wyczyść kupione') }}</button></form>
     {% endif %}
   </div>
 </div>
 
 <form method="post" action="{{ url_for('shopping_add') }}" class="card addrow" autocomplete="off">
-  <label class="grow">Dodaj do listy
-    <input id="addName" name="name" list="addOptions" placeholder="zacznij pisać nazwę aromatu, bazy, butelki…">
+  <label class="grow">{{ _('Dodaj do listy') }}
+    <input id="addName" name="name" list="addOptions" placeholder="{{ _('zacznij pisać nazwę aromatu, bazy, butelki…') }}">
     <input type="hidden" name="ingredient_id" id="addId">
   </label>
-  <label class="mid">Opakowanie
-    <span class="unitbox"><input name="pack_size" id="addPackInput" inputmode="decimal" placeholder="pojemność"><span class="unit" id="addUnit">ml</span></span>
+  <label class="mid">{{ _('Opakowanie') }}
+    <span class="unitbox"><input name="pack_size" id="addPackInput" inputmode="decimal" placeholder="{{ _('pojemność') }}"><span class="unit" id="addUnit">ml</span></span>
   </label>
-  <label class="narrow">Sztuk <input name="pack_count" value="1" inputmode="numeric"></label>
-  <button class="btn primary"><svg><use href="#i-plus"/></svg>Dodaj</button>
+  <label class="narrow">{{ _('Sztuk') }} <input name="pack_count" value="1" inputmode="numeric"></label>
+  <button class="btn primary"><svg><use href="#i-plus"/></svg>{{ _('Dodaj') }}</button>
   <small class="muted addhint" id="addHint"></small>
 </form>
 
@@ -31,8 +31,8 @@
 <table class="grid" id="shop">
   <thead>
     <tr>
-      <th>Składnik</th><th>Producent</th><th class="r">Stan</th><th style="width:9rem">Opakowanie</th>
-      <th style="width:6rem">Sztuk</th><th data-nosort></th>
+      <th>{{ _('Składnik') }}</th><th>{{ _('Producent') }}</th><th class="r">{{ _('Stan') }}</th><th style="width:9rem">{{ _('Opakowanie') }}</th>
+      <th style="width:6rem">{{ _('Sztuk') }}</th><th data-nosort></th>
     </tr>
   </thead>
   <tbody>
@@ -40,19 +40,19 @@
     <tr data-id="{{ i.id }}" data-name="{{ i.ing_name or i.name }}" data-man="{{ i.manufacturer or '' }}" data-unit="{{ i.unit }}">
       <td data-sort="{{ i.ing_name or i.name }}">
         {% if i.ing_id %}<a href="{{ url_for('ingredient_card', ingredient_id=i.ing_id) }}">{{ i.ing_name }}</a>
-        {% else %}{{ i.name }} <span class="tag group">spoza magazynu</span>{% endif %}
+        {% else %}{{ i.name }} <span class="tag group">{{ _('spoza magazynu') }}</span>{% endif %}
       </td>
       <td>{{ i.manufacturer or '' }}</td>
       <td class="r {{ 'neg' if i.stock is not none and i.stock <= 0 }}" data-sort="{{ i.stock if i.stock is not none else '' }}">{{ (i.stock|num(1) ~ ' ' ~ i.unit) if i.stock is not none else '' }}</td>
       <td><div class="unitbox"><input class="pack" value="{{ i.pack_size|num if i.pack_size }}" inputmode="decimal"><span class="unit">{{ i.unit }}</span></div></td>
       <td><input class="count r" value="{{ i.pack_count }}" inputmode="numeric"></td>
       <td class="r nowrap rowact">
-        <button class="link" formaction="{{ url_for('shopping_done', item_id=i.id) }}" title="Oznacz jako kupione">✓ kupione</button>
-        <button class="link danger" formaction="{{ url_for('shopping_delete', item_id=i.id) }}" title="Usuń z listy">usuń</button>
+        <button class="link" formaction="{{ url_for('shopping_done', item_id=i.id) }}" title="{{ _('Oznacz jako kupione') }}">{{ _('✓ kupione') }}</button>
+        <button class="link danger" formaction="{{ url_for('shopping_delete', item_id=i.id) }}" title="{{ _('Usuń z listy') }}">{{ _('usuń') }}</button>
       </td>
     </tr>
   {% else %}
-    <tr><td colspan="6" class="empty">Lista jest pusta. Dodaj aromat powyżej, kliknij „Dodaj braki” albo „Do listy zakupów” na karcie składnika.</td></tr>
+    <tr><td colspan="6" class="empty">{{ _('Lista jest pusta. Dodaj aromat powyżej, kliknij „Dodaj braki” albo „Do listy zakupów” na karcie składnika.') }}</td></tr>
   {% endfor %}
   </tbody>
 </table>
@@ -60,17 +60,16 @@
 
 {% if done %}
 <section class="card">
-  <h2>Ostatnio kupione</h2>
+  <h2>{{ _('Ostatnio kupione') }}</h2>
   <ul class="history">
     {% for d in done %}
       <li>{{ d.done_at[:10] }} · {{ d.ing_name or d.name }}{% if d.manufacturer %} <small>{{ d.manufacturer }}</small>{% endif %}
-        <form method="post" action="{{ url_for('shopping_done', item_id=d.id) }}" style="display:inline"><button class="link" title="Przywróć na listę">przywróć</button></form></li>
+        <form method="post" action="{{ url_for('shopping_done', item_id=d.id) }}" style="display:inline"><button class="link" title="{{ _('Przywróć na listę') }}">{{ _('przywróć') }}</button></form></li>
     {% endfor %}
   </ul>
 </section>
 {% endif %}
-<p class="muted hint" style="margin-left:0">Pozycje odhaczają się same, gdy zapiszesz ich przyjęcie (także wklejone z maila).
-  Pojemność i liczbę sztuk zmienisz wprost w tabeli – zapisują się od razu.</p>
+<p class="muted hint" style="margin-left:0">{{ _('Pozycje odhaczają się same, gdy zapiszesz ich przyjęcie (także wklejone z maila). Pojemność i liczbę sztuk zmienisz wprost w tabeli – zapisują się od razu.') }}</p>
 
 <datalist id="addOptions">{% for o in options %}<option value="{{ o.label }}">{% endfor %}</datalist>
 {% endblock %}
@@ -93,9 +92,9 @@
     const d = await (await fetch('{{ url_for("api_shopping_packs") }}?ingredient_id=' + id)).json();
     if (addId.value !== String(id)) return;
     document.getElementById('addUnit').textContent = d.unit;
-    if (d.default && !addInput.value) addInput.value = String(d.default).replace('.', ',');
-    addHint.textContent = d.on_list ? 'ten składnik już jest na liście – zmień pojemność w tabeli poniżej'
-      : (d.default ? 'podpowiedź: ostatnio kupowana pojemność' : '');
+    if (d.default && !addInput.value) addInput.value = String(d.default).replace('.', DEC);
+    addHint.textContent = d.on_list ? t('ten składnik już jest na liście – zmień pojemność w tabeli poniżej')
+      : (d.default ? t('podpowiedź: ostatnio kupowana pojemność') : '');
   }
   addName.addEventListener('input', loadPacks);
   addName.addEventListener('change', loadPacks);
@@ -125,11 +124,11 @@
       return `- ${tr.dataset.name}${tr.dataset.man ? ' (' + tr.dataset.man + ')' : ''}` +
              `${pack ? ' – ' + pack + ' ' + (tr.dataset.unit || 'ml') : ''} × ${count}`;
     });
-    const text = 'Lista zakupów:\n' + lines.join('\n');
+    const text = t('Lista zakupów:') + '\n' + lines.join('\n');
     try { await navigator.clipboard.writeText(text); }
     catch (err) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
-    copyBtn.lastChild.textContent = 'Skopiowano!';
-    setTimeout(() => { copyBtn.lastChild.textContent = 'Kopiuj listę'; }, 1800);
+    copyBtn.lastChild.textContent = t('Skopiowano!');
+    setTimeout(() => { copyBtn.lastChild.textContent = t('Kopiuj listę'); }, 1800);
   });
 })();
 </script>

@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block back %}{{ url_for('receipts') }}{% endblock %}
-{% block title %}Przyjęcie {{ purchase.date }}{% endblock %}
+{% block title %}{{ _('Przyjęcie') }} {{ purchase.date }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>Przyjęcie {{ purchase.date }}{% if purchase.supplier %} <span class="muted">· {{ purchase.supplier }}</span>{% endif %}</h1>
+  <h1>{{ _('Przyjęcie') }} {{ purchase.date }}{% if purchase.supplier %} <span class="muted">· {{ purchase.supplier }}</span>{% endif %}</h1>
   <div class="actions">
-    <a class="btn primary" href="{{ url_for('receipt_new') }}"><svg><use href="#i-in"/></svg>Kolejne przyjęcie</a>
-    <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>Historia przyjęć</a>
+    <a class="btn primary" href="{{ url_for('receipt_new') }}"><svg><use href="#i-in"/></svg>{{ _('Kolejne przyjęcie') }}</a>
+    <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>{{ _('Historia przyjęć') }}</a>
   </div>
 </div>
 {% if purchase.note %}<p class="muted">{{ purchase.note }}</p>{% endif %}
 <table class="grid">
-  <thead><tr><th>Składnik</th><th>Producent</th><th>Kategoria</th><th class="r">Opakowanie</th><th class="r">Sztuk</th>
-    <th class="r">Cena / opak.</th><th class="r">Ilość</th><th class="r">Razem</th><th></th></tr></thead>
+  <thead><tr><th>{{ _('Składnik') }}</th><th>{{ _('Producent') }}</th><th>{{ _('Kategoria') }}</th><th class="r">{{ _('Opakowanie') }}</th><th class="r">{{ _('Sztuk') }}</th>
+    <th class="r">{{ _('Cena / opak.') }}</th><th class="r">{{ _('Ilość') }}</th><th class="r">{{ _('Razem') }}</th><th></th></tr></thead>
   <tbody>
   {% set ns = namespace(total=0) %}
   {% for l in lines %}
@@ -25,18 +25,18 @@
       <td class="r">{{ (l.unit_cost * l.pack_size)|money }}</td>
       <td class="r">{{ l.qty|num }} {{ unit }}</td><td class="r">{{ (l.qty * l.unit_cost)|money }}</td>
       <td class="r">
-        <form method="post" action="{{ url_for('movement_delete', movement_id=l.id) }}" onsubmit="return confirm('Usunąć tę pozycję?')">
+        <form method="post" action="{{ url_for('movement_delete', movement_id=l.id) }}" onsubmit="return confirm({{ _('Usunąć tę pozycję?')|tojson|forceescape }})">
           <input type="hidden" name="next" value="{{ url_for('receipt_view', purchase_id=purchase.id) if lines|length > 1 else url_for('receipts') }}">
-          <button class="link danger">usuń</button>
+          <button class="link danger">{{ _('usuń') }}</button>
         </form>
       </td>
     </tr>
   {% endfor %}
   </tbody>
-  <tfoot><tr><td colspan="7" class="r">Razem</td><td class="r"><strong>{{ ns.total|money }}</strong></td><td></td></tr></tfoot>
+  <tfoot><tr><td colspan="7" class="r">{{ _('Razem') }}</td><td class="r"><strong>{{ ns.total|money }}</strong></td><td></td></tr></tfoot>
 </table>
 <form method="post" action="{{ url_for('receipt_delete', purchase_id=purchase.id) }}" class="formfoot left"
-      onsubmit="return confirm('Usunąć całe przyjęcie? Stany zostaną przeliczone.')">
-  <button class="btn danger">Usuń całe przyjęcie</button>
+      onsubmit="return confirm({{ _('Usunąć całe przyjęcie? Stany zostaną przeliczone.')|tojson|forceescape }})">
+  <button class="btn danger">{{ _('Usuń całe przyjęcie') }}</button>
 </form>
 {% endblock %}

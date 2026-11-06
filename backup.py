@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 
 import db
+from i18n import _
 
 DEFAULT_KEEP = 30
 NAME_RE = re.compile(r"^liquiderp-(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})(\d{2})(?:-([\w-]+))?\.db$")
@@ -57,7 +58,7 @@ def list_backups():
         result.append({
             "name": name,
             "when": f"{m.group(1)} {m.group(2)}:{m.group(3)}",
-            "reason": REASONS.get(m.group(5), m.group(5) or ""),
+            "reason": _(REASONS[m.group(5)]) if m.group(5) in REASONS else (m.group(5) or ""),
             "size_kb": os.path.getsize(path) / 1024,
         })
     return sorted(result, key=lambda b: b["name"], reverse=True)
@@ -77,10 +78,10 @@ def daily():
 
 def path_of(name):
     if not NAME_RE.match(name or ""):
-        raise ValueError("Nieprawidłowa nazwa kopii.")
+        raise ValueError(_("Nieprawidłowa nazwa kopii."))
     path = os.path.join(backup_dir(), name)
     if not os.path.exists(path):
-        raise ValueError("Nie ma takiej kopii.")
+        raise ValueError(_("Nie ma takiej kopii."))
     return path
 
 

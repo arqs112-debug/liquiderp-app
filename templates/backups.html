@@ -1,29 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Kopie zapasowe{% endblock %}
+{% block title %}{{ _('Kopie zapasowe') }}{% endblock %}
 {% block content %}
 {% include "settings_tabs.html" %}
 <div class="pagehead">
-  <form method="post" action="{{ url_for('backup_create') }}" class="actions"><button class="btn primary"><svg><use href="#i-archive"/></svg>Zrób kopię teraz</button></form>
+  <form method="post" action="{{ url_for('backup_create') }}" class="actions"><button class="btn primary"><svg><use href="#i-archive"/></svg>{{ _('Zrób kopię teraz') }}</button></form>
 </div>
-<p class="muted">Kopia robi się sama przy pierwszym uruchomieniu programu każdego dnia. Trzymam {{ keep }} najnowszych
-  (zmienisz to w <a href="{{ url_for('settings_page') }}">Ustawieniach</a>).
-  Folder: <code>{{ folder }}</code>. Warto co jakiś czas pobrać kopię i schować ją poza komputerem (pendrive, chmura).</p>
+<p class="muted">{{ _('Kopia robi się sama przy pierwszym uruchomieniu programu każdego dnia. Trzymam {n} najnowszych (zmienisz to w {a}Ustawieniach{end}). Folder: {folder}. Warto co jakiś czas pobrać kopię i schować ją poza komputerem (pendrive, chmura).',
+      n=keep, a='<a href="' ~ url_for('settings_page') ~ '">', end='</a>', folder='<code>%s</code>'|format(folder|e))|safe }}</p>
 <table class="grid">
-  <thead><tr><th>Data</th><th>Rodzaj</th><th class="r">Rozmiar</th><th></th></tr></thead>
+  <thead><tr><th>{{ _('Data') }}</th><th>{{ _('Rodzaj') }}</th><th class="r">{{ _('Rozmiar') }}</th><th></th></tr></thead>
   <tbody>
   {% for b in backups %}
     <tr>
-      <td>{{ b.when }}</td><td>{{ b.reason }}</td><td class="r">{{ b.size_kb|num(0) }} KB</td>
+      <td>{{ b.when }}</td><td>{{ b.reason }}</td><td class="r">{{ b.size_kb|num(0) }} {{ _('KB') }}</td>
       <td class="r">
-        <a href="{{ url_for('backup_download', name=b.name) }}">pobierz</a>
+        <a href="{{ url_for('backup_download', name=b.name) }}">{{ _('pobierz') }}</a>
         <form method="post" action="{{ url_for('backup_restore', name=b.name) }}" style="display:inline"
-              onsubmit="return confirm('Przywrócić dane z {{ b.when }}? Obecny stan zostanie najpierw zapisany jako osobna kopia.')">
-          <button class="link" style="margin-left:1rem">przywróć</button>
+              onsubmit="return confirm({{ _('Przywrócić dane z {when}? Obecny stan zostanie najpierw zapisany jako osobna kopia.', when=b.when)|tojson|forceescape }})">
+          <button class="link" style="margin-left:1rem">{{ _('przywróć') }}</button>
         </form>
       </td>
     </tr>
   {% else %}
-    <tr><td colspan="4" class="empty">Nie ma jeszcze kopii.</td></tr>
+    <tr><td colspan="4" class="empty">{{ _('Nie ma jeszcze kopii.') }}</td></tr>
   {% endfor %}
   </tbody>
 </table>

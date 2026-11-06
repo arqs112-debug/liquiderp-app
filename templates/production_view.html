@@ -6,24 +6,24 @@
   <h1>{{ prod.recipe_name }} <span class="muted">· {{ prod.date }}</span></h1>
   <div class="actions">
     {% if prod.recipe_id %}
-      <a class="btn primary" href="{{ url_for('production_new', przepis=prod.recipe_id) }}"><svg><use href="#i-make"/></svg>Zrób ponownie</a>
-      <a class="btn" href="{{ url_for('recipe_edit', recipe_id=prod.recipe_id) }}"><svg><use href="#i-flask"/></svg>Przepis</a>
+      <a class="btn primary" href="{{ url_for('production_new', przepis=prod.recipe_id) }}"><svg><use href="#i-make"/></svg>{{ _('Zrób ponownie') }}</a>
+      <a class="btn" href="{{ url_for('recipe_edit', recipe_id=prod.recipe_id) }}"><svg><use href="#i-flask"/></svg>{{ _('Przepis') }}</a>
     {% endif %}
-    <a class="btn" href="{{ url_for('productions') }}"><svg><use href="#i-clock"/></svg>Historia produkcji</a>
+    <a class="btn" href="{{ url_for('productions') }}"><svg><use href="#i-clock"/></svg>{{ _('Historia produkcji') }}</a>
   </div>
 </div>
 
 <div class="card stat four">
-  <div><span class="muted">Ilość</span><strong>{{ prod.amount_ml|num }} ml</strong></div>
-  <div><span class="muted">Nikotyna · PG/VG</span><strong>{{ prod.nicotine_mg|num }} mg · {{ prod.pg_pct|num(0) }}/{{ prod.vg_pct|num(0) }}</strong></div>
-  <div><span class="muted">Koszt</span><strong>{{ prod.cost_total|money }}</strong></div>
-  <div><span class="muted">Koszt / ml</span><strong>{{ (prod.cost_total / prod.amount_ml if prod.amount_ml else 0)|money }}</strong></div>
+  <div><span class="muted">{{ _('Ilość') }}</span><strong>{{ prod.amount_ml|num }} ml</strong></div>
+  <div><span class="muted">{{ _('Nikotyna · PG/VG') }}</span><strong>{{ prod.nicotine_mg|num }} mg · {{ prod.pg_pct|num(0) }}/{{ prod.vg_pct|num(0) }}</strong></div>
+  <div><span class="muted">{{ _('Koszt') }}</span><strong>{{ prod.cost_total|money }}</strong></div>
+  <div><span class="muted">{{ _('Koszt / ml') }}</span><strong>{{ (prod.cost_total / prod.amount_ml if prod.amount_ml else 0)|money }}</strong></div>
 </div>
-{% if prod.forced %}<div class="note warn">Zrobione mimo braków – część stanów zeszła poniżej zera.</div>{% endif %}
+{% if prod.forced %}<div class="note warn">{{ _('Zrobione mimo braków – część stanów zeszła poniżej zera.') }}</div>{% endif %}
 {% if prod.note %}<p class="muted">{{ prod.note }}</p>{% endif %}
 
 <table class="grid">
-  <thead><tr><th>Składnik</th><th>Producent</th><th class="r">Zużyto</th><th class="r">Koszt jedn.</th><th class="r">Koszt</th></tr></thead>
+  <thead><tr><th>{{ _('Składnik') }}</th><th>{{ _('Producent') }}</th><th class="r">{{ _('Zużyto') }}</th><th class="r">{{ _('Koszt jedn.') }}</th><th class="r">{{ _('Koszt') }}</th></tr></thead>
   <tbody>
   {% for l in lines %}
     {% set unit = CATEGORIES[l.category].unit %}
@@ -39,7 +39,7 @@
 </table>
 
 <form method="post" action="{{ url_for('production_undo', production_id=prod.id) }}" class="formfoot left"
-      onsubmit="return confirm('Cofnąć tę produkcję? Zużyte składniki i butelki wrócą na magazyn.')">
-  <button class="btn danger">Cofnij produkcję</button>
+      onsubmit="return confirm({{ _('Cofnąć tę produkcję? Zużyte składniki i butelki wrócą na magazyn.')|tojson|forceescape }})">
+  <button class="btn danger">{{ _('Cofnij produkcję') }}</button>
 </form>
 {% endblock %}

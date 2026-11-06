@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Ogólne{% endblock %}
+{% block title %}{{ _('Ogólne') }}{% endblock %}
 {% block content %}
 {% include "settings_tabs.html" %}
 
@@ -7,74 +7,76 @@
 <div class="cols">
   <div>
     <section class="card">
-      <h2>Wygląd i praca</h2>
+      <h2>{{ _('Wygląd i praca') }}</h2>
       <div class="fields">
-        <label>Motyw
+        <label>{{ _('Język / Language') }}
+          <select name="language">
+            {% for code, name in LANGUAGES.items() %}<option value="{{ code }}" {{ 'selected' if LANG == code }}>{{ name }}</option>{% endfor %}
+          </select></label>
+        <label>{{ _('Motyw') }}
           <select name="theme">
-            <option value="dark" {{ 'selected' if cfg.theme != 'light' }}>ciemny</option>
-            <option value="light" {{ 'selected' if cfg.theme == 'light' }}>jasny</option>
+            <option value="dark" {{ 'selected' if cfg.theme != 'light' }}>{{ _('ciemny') }}</option>
+            <option value="light" {{ 'selected' if cfg.theme == 'light' }}>{{ _('jasny') }}</option>
           </select></label>
-        <label title="Którą kolumnę wyróżniać w wyliczeniach przepisu i produkcji">Przy mieszaniu
+        <label title="{{ _('Którą kolumnę wyróżniać w wyliczeniach przepisu i produkcji') }}">{{ _('Przy mieszaniu') }}
           <select name="measure">
-            <option value="ml" {{ 'selected' if cfg.measure != 'g' }}>Odmierzam ml (strzykawka, cylinder)</option>
-            <option value="g" {{ 'selected' if cfg.measure == 'g' }}>Ważę g (waga, narastająco)</option>
+            <option value="ml" {{ 'selected' if cfg.measure != 'g' }}>{{ _('Odmierzam ml (strzykawka, cylinder)') }}</option>
+            <option value="g" {{ 'selected' if cfg.measure == 'g' }}>{{ _('Ważę g (waga, narastająco)') }}</option>
           </select></label>
-        <label title="Symbol dopisywany do kwot, np. zł, €, Kč">Waluta
-          <input name="currency" value="{{ cfg.currency }}" maxlength="6" placeholder="zł"></label>
-        <label>Format liczb <input value="1 234,56 (polski)" disabled></label>
+        <label title="{{ _('Symbol dopisywany do kwot, np. zł, €, Kč') }}">{{ _('Waluta') }}
+          <input name="currency" value="{{ cfg.currency }}" maxlength="6" placeholder="{{ _('zł') }}"></label>
+        <label>{{ _('Format liczb') }} <input value="{{ 1234.56|num }}" disabled title="{{ _('Wynika z języka; w polach można wpisywać liczby z przecinkiem albo kropką.') }}"></label>
       </div>
     </section>
 
     <section class="card">
-      <h2>Nowy przepis – wartości domyślne</h2>
+      <h2>{{ _('Nowy przepis – wartości domyślne') }}</h2>
       <div class="fields three">
-        <label>Ilość (ml) <input name="recipe_amount_ml" value="{{ cfg.recipe_amount_ml }}" inputmode="decimal"></label>
-        <label>PG % <input name="recipe_pg_pct" id="sPg" value="{{ cfg.recipe_pg_pct }}" inputmode="decimal"></label>
-        <label>VG % <input id="sVg" value="" inputmode="decimal"></label>
-        <label>Nikotyna (mg/ml) <input name="recipe_nicotine_mg" value="{{ cfg.recipe_nicotine_mg }}" inputmode="decimal"></label>
+        <label>{{ _('Ilość (ml)') }} <input name="recipe_amount_ml" value="{{ cfg.recipe_amount_ml }}" inputmode="decimal"></label>
+        <label>{{ _('PG %') }} <input name="recipe_pg_pct" id="sPg" value="{{ cfg.recipe_pg_pct }}" inputmode="decimal"></label>
+        <label>{{ _('VG %') }} <input id="sVg" value="" inputmode="decimal"></label>
+        <label>{{ _('Nikotyna (mg/ml)') }} <input name="recipe_nicotine_mg" value="{{ cfg.recipe_nicotine_mg }}" inputmode="decimal"></label>
         {% for key, label, cat in [('recipe_nicotine_id', 'Baza nikotynowa', 'nicotine'), ('recipe_pg_id', 'PG', 'pg'), ('recipe_vg_id', 'VG', 'vg')] %}
           <label>{{ label }}
             <select name="{{ key }}">
-              <option value="">– jak w ostatnim przepisie –</option>
+              <option value="">{{ _('– jak w ostatnim przepisie –') }}</option>
               {% for o in options[cat] %}<option value="{{ o.id }}" {{ 'selected' if cfg[key] == o.id|string }}>{{ o.label }}</option>{% endfor %}
             </select></label>
         {% endfor %}
       </div>
       {% if not options.nicotine or not options.pg or not options.vg %}
-        <p class="muted hint" style="margin:.6rem 0 0">Brakujące bazy dodasz <a href="{{ url_for('ingredient_new', kat='pg') }}">nowym składnikiem</a>
-          albo przyjęciem (kategorie „Baza nikotynowa”, „PG”, „VG”).</p>
+        <p class="muted hint" style="margin:.6rem 0 0">{{ _('Brakujące bazy dodasz') }} <a href="{{ url_for('ingredient_new', kat='pg') }}">{{ _('nowym składnikiem') }}</a>
+          {{ _('albo przyjęciem (kategorie „Baza nikotynowa”, „PG”, „VG”).') }}</p>
       {% endif %}
     </section>
   </div>
 
   <div>
     <section class="card">
-      <h2>PDF na telefon</h2>
-      <p class="muted hint" style="margin:0 0 .7rem">Program zapisuje plik „LiquidERP na telefon.pdf” (lista zakupów i stany, w formacie
-        wygodnym do czytania na telefonie) i odświeża go po każdej zmianie. Wybierz folder synchronizowany z telefonem –
-        np. OneDrive, Dysk Google albo Dropbox.</p>
+      <h2>{{ _('PDF na telefon') }}</h2>
+      <p class="muted hint" style="margin:0 0 .7rem">{{ _('Program zapisuje plik „LiquidERP na telefon.pdf” (lista zakupów i stany, w formacie wygodnym do czytania na telefonie) i odświeża go po każdej zmianie. Wybierz folder synchronizowany z telefonem – np. OneDrive, Dysk Google albo Dropbox.') }}</p>
       <div class="fields">
-        <label class="check wide"><input type="checkbox" name="phone_pdf_enabled" value="1" {{ 'checked' if cfg.phone_pdf_enabled == '1' }}> zapisuj PDF na telefon</label>
-        <label class="wide">Folder
+        <label class="check wide"><input type="checkbox" name="phone_pdf_enabled" value="1" {{ 'checked' if cfg.phone_pdf_enabled == '1' }}> {{ _('zapisuj PDF na telefon') }}</label>
+        <label class="wide">{{ _('Folder') }}
           <span class="pickrow"><input name="phone_pdf_dir" id="phoneDir" value="{{ cfg.phone_pdf_dir }}" placeholder="{{ suggested_dir }}">
-            <button type="button" class="btn" id="pickDir">Wybierz…</button></span></label>
+            <button type="button" class="btn" id="pickDir">{{ _('Wybierz…') }}</button></span></label>
       </div>
       {% if cfg.phone_pdf_enabled == '1' %}
-        <div class="formfoot left"><button class="btn" formaction="{{ url_for('phone_pdf_now') }}">Zapisz PDF teraz</button></div>
+        <div class="formfoot left"><button class="btn" formaction="{{ url_for('phone_pdf_now') }}">{{ _('Zapisz PDF teraz') }}</button></div>
       {% endif %}
     </section>
 
     <section class="card">
-      <h2>Kopie zapasowe</h2>
+      <h2>{{ _('Kopie zapasowe') }}</h2>
       <div class="fields">
-        <label>Liczba przechowywanych kopii <input name="backup_keep" value="{{ cfg.backup_keep }}" inputmode="numeric"></label>
-        <label>&nbsp;<a class="btn" href="{{ url_for('backups') }}"><svg><use href="#i-archive"/></svg>Lista kopii</a></label>
+        <label>{{ _('Liczba przechowywanych kopii') }} <input name="backup_keep" value="{{ cfg.backup_keep }}" inputmode="numeric"></label>
+        <label>{{ _('&nbsp;') }}<a class="btn" href="{{ url_for('backups') }}"><svg><use href="#i-archive"/></svg>{{ _('Lista kopii') }}</a></label>
       </div>
     </section>
 
   </div>
 </div>
-<div class="formfoot"><button class="btn primary"><svg><use href="#i-save"/></svg>Zapisz ustawienia</button></div>
+<div class="formfoot"><button class="btn primary"><svg><use href="#i-save"/></svg>{{ _('Zapisz ustawienia') }}</button></div>
 </form>
 {% endblock %}
 
@@ -82,8 +84,8 @@
 <script>
 (function () {
   const pg = document.getElementById('sPg'), vg = document.getElementById('sVg');
-  const num = s => parseFloat(String(s).replace(',', '.'));
-  const fmt = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  const num = parseNum;
+  const fmt = v => decStr(Math.round(v * 10) / 10);
   vg.value = isNaN(num(pg.value)) ? '' : fmt(100 - num(pg.value));
   pg.addEventListener('input', () => { const v = num(pg.value); if (!isNaN(v) && v >= 0 && v <= 100) vg.value = fmt(100 - v); });
   vg.addEventListener('input', () => { const v = num(vg.value); if (!isNaN(v) && v >= 0 && v <= 100) pg.value = fmt(100 - v); });

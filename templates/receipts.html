@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Historia przyjęć{% endblock %}
+{% block title %}{{ _('Historia przyjęć') }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <h1>Historia przyjęć</h1>
-  <div class="actions"><a class="btn primary" href="{{ url_for('receipt_new') }}"><svg><use href="#i-in"/></svg>Nowe przyjęcie</a></div>
+  <h1>{{ _('Historia przyjęć') }}</h1>
+  <div class="actions"><a class="btn primary" href="{{ url_for('receipt_new') }}"><svg><use href="#i-in"/></svg>{{ _('Nowe przyjęcie') }}</a></div>
 </div>
 <table class="grid">
-  <thead><tr><th>Data</th><th>Sklep</th><th>Uwagi</th><th class="r">Pozycji</th><th class="r">Wartość</th></tr></thead>
+  <thead><tr><th>{{ _('Data') }}</th><th>{{ _('Sklep') }}</th><th>{{ _('Uwagi') }}</th><th class="r">{{ _('Pozycji') }}</th><th class="r">{{ _('Wartość') }}</th></tr></thead>
   <tbody>
   {% for r in rows %}
     <tr onclick="location.href='{{ url_for('receipt_view', purchase_id=r.id) }}'">
@@ -15,7 +15,7 @@
       <td class="r">{{ r.lines }}</td><td class="r">{{ (r.total or 0)|money }}</td>
     </tr>
   {% else %}
-    <tr><td colspan="5" class="empty">Brak przyjęć.</td></tr>
+    <tr><td colspan="5" class="empty">{{ _('Brak przyjęć.') }}</td></tr>
   {% endfor %}
   </tbody>
 </table>

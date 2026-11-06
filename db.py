@@ -1,5 +1,6 @@
 """Warstwa danych LiquidERP: schemat SQLite, kategorie i wyliczanie stanów."""
 import os
+import re
 import sqlite3
 from datetime import date
 
@@ -196,12 +197,25 @@ def is_empty(conn):
 
 
 def parse_num(value, default=None):
-    """Liczba z formularza; akceptuje przecinek i spacje jako separatory."""
+    """Liczba z formularza w obu zapisach: „1 017,52”, „1,017.52”, „12,5”, „12.5”.
+
+    Gdy są oba znaki, ostatni z nich oddziela część dziesiętną. Sam przecinek to część
+    dziesiętna („12,5”), chyba że wygląda jak separator tysięcy z angielskiego zapisu („1,250,000”).
+    """
     if value is None:
         return default
-    text = str(value).strip().replace(" ", "").replace(" ", "").replace(",", ".")
+    text = re.sub(r"[\s  ']", "", str(value)).replace("−", "-")
     if not text:
         return default
+    if "," in text and "." in text:
+        if text.rfind(",") > text.rfind("."):
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            text = text.replace(",", "")
+    elif text.count(",") > 1 and re.fullmatch(r"-?\d{1,3}(,\d{3})+", text):
+        text = text.replace(",", "")
+    else:
+        text = text.replace(",", ".")
     try:
         return float(text)
     except ValueError:

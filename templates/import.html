@@ -1,19 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Import danych{% endblock %}
+{% block title %}{{ _('Import danych') }}{% endblock %}
 {% block content %}
 {% include "settings_tabs.html" %}
 <form method="post" class="card" enctype="multipart/form-data">
-  <h2>Import z EJuiceCalculatora</h2>
-  <p class="muted">Wczytuje składniki (z opisami, cenami, stanami i progami), przepisy oraz historię ich robienia
-    z pliku XML EJuiceCalculatora (zwykle <code>Baza.xml</code> w jego folderze). Oryginalny plik nie jest zmieniany.</p>
+  <h2>{{ _('Import z EJuiceCalculatora') }}</h2>
+  <p class="muted">{{ _('Wczytuje składniki (z opisami, cenami, stanami i progami), przepisy oraz historię ich robienia z pliku XML EJuiceCalculatora (zwykle {file} w jego folderze). Oryginalny plik nie jest zmieniany.', file='<code>Baza.xml</code>')|safe }}</p>
   <div class="fields">
-    <label class="wide">Plik z danymi
+    <label class="wide">{{ _('Plik z danymi') }}
       <input type="file" name="file" accept=".xml,text/xml" required></label>
     {% if has_data %}
       <label class="check wide"><input type="checkbox" name="replace" value="1">
-        zastąp istniejące dane (usuwa wszystko, co jest teraz w LiquidERP; wcześniej zrobi się kopia zapasowa)</label>
+        {{ _('zastąp istniejące dane (usuwa wszystko, co jest teraz w LiquidERP; wcześniej zrobi się kopia zapasowa)') }}</label>
     {% endif %}
   </div>
-  <div class="formfoot"><button class="btn primary"><svg><use href="#i-up"/></svg>Importuj</button></div>
+  <div class="formfoot"><button class="btn primary"><svg><use href="#i-up"/></svg>{{ _('Importuj') }}</button></div>
 </form>
 {% endblock %}
