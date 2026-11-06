@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Pulpit{% endblock %}
+{% block content %}
+<div class="tiles actions-tiles">
+  <a class="tile green" href="{{ url_for('production_new') }}"><svg><use href="#i-make"/></svg><div><b>Zrób liquid</b><small>z przepisu, z odjęciem ze stanów</small></div></a>
+  <a class="tile blue" href="{{ url_for('receipt_new') }}"><svg><use href="#i-in"/></svg><div><b>Nowe przyjęcie</b><small>ręcznie albo wklejone z maila</small></div></a>
+  <a class="tile violet" href="{{ url_for('recipe_edit') }}"><svg><use href="#i-flask"/></svg><div><b>Nowy przepis</b><small>z wyliczeniem na żywo</small></div></a>
+  <a class="tile orange" href="{{ url_for('inventory') }}"><svg><use href="#i-box"/></svg><div><b>Stany magazynowe</b><small>aromaty, bazy, butelki</small></div></a>
+</div>
+
+<div class="tiles">
+  <a class="tile green" href="{{ url_for('inventory') }}">
+    <svg><use href="#i-wallet"/></svg>
+    <span class="t-label">Wartość magazynu</span>
+    <span class="t-value">{{ stats.value|money }}</span>
+    <span class="t-sub">{{ stats.items_in_stock }} pozycji na stanie</span>
+  </a>
+  <a class="tile {{ 'red' if stats.low else 'green' }}" href="#braki">
+    <svg><use href="#i-alert"/></svg>
+    <span class="t-label">Poniżej minimum</span>
+    <span class="t-value">{{ stats.low|length }}</span>
+    <span class="t-sub">{{ 'do domówienia' if stats.low else 'wszystko w normie' }}</span>
+  </a>
+  <a class="tile blue" href="{{ url_for('productions') }}">
+    <svg><use href="#i-make"/></svg>
+    <span class="t-label">Produkcja w tym miesiącu</span>
+    <span class="t-value">{{ stats.prod.ml|num(0) }} ml</span>
+    <span class="t-sub">{{ stats.prod.n }} partii · koszt {{ stats.prod.cost|money }}</span>
+  </a>
+  <a class="tile orange" href="{{ url_for('receipts') }}">
+    <svg><use href="#i-in"/></svg>
+    <span class="t-label">Zakupy w tym miesiącu</span>
+    <span class="t-value">{{ stats.bought|money }}</span>
+    <span class="t-sub">bez bilansu otwarcia</span>
+  </a>
+  <a class="tile violet" href="{{ url_for('recipes') }}">
+    <svg><use href="#i-flask"/></svg>
+    <span class="t-label">Przepisy</span>
+    <span class="t-value">{{ stats.recipes }}</span>
+    <span class="t-sub">w tym {{ stats.recipes_top }} z oceną ★★★★+</span>
+  </a>
+</div>
+
+<div class="dash">
+  <section class="card" id="braki">
+    <h2>Do uzupełnienia</h2>
+    {% if stats.low %}
+      <form method="post" action="{{ url_for('shopping_add_low') }}" class="formfoot left" style="margin:0 0 .6rem">
+        <button class="btn"><svg><use href="#i-cart"/></svg>Dodaj braki do listy zakupów</button>
+        <a class="btn" href="{{ url_for('shopping') }}">Lista zakupów</a>
+      </form>
+      <table class="grid compact">
+        <thead><tr><th>Składnik</th><th class="r">Stan</th><th class="r">Minimum</th><th class="r">Brakuje</th></tr></thead>
+        <tbody>
+        {% for r in stats.low[:12] %}
+          <tr onclick="location.href='{{ url_for('ingredient_card', ingredient_id=r.id) }}'">
+            <td><a href="{{ url_for('ingredient_card', ingredient_id=r.id) }}">{{ r.name }}</a> <small>{{ r.manufacturer }}</small></td>
+            <td class="r {{ 'neg' if r.qty <= 0 }}">{{ r.qty|num(1) }} {{ r.unit }}</td>
+            <td class="r muted">{{ r.min_stock|num }} {{ r.unit }}</td>
+            <td class="r"><b>{{ (r.min_stock - r.qty)|num(1) }} {{ r.unit }}</b></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">Żaden składnik nie spadł poniżej ustawionego minimum. Minimum ustawisz na karcie składnika.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Ostatnio robione</h2>
+    <table class="grid compact">
+      <tbody>
+      {% for m in recent_made %}
+        <tr onclick="location.href='{{ url_for('recipe_edit', recipe_id=m.id) }}'">
+          <td class="muted" style="width:6.5rem">{{ m.date[:10] }}</td>
+          <td><a href="{{ url_for('recipe_edit', recipe_id=m.id) }}">{{ m.name }}</a></td>
+          <td class="r muted">{{ m.note if m.note != 'import z EJuiceCalculatora' else '' }}</td>
+        </tr>
+      {% else %}
+        <tr><td class="empty">Brak.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Ostatnie przyjęcia</h2>
+    <table class="grid compact">
+      <tbody>
+      {% for p in recent_receipts %}
+        <tr onclick="location.href='{{ url_for('receipt_view', purchase_id=p.id) }}'">
+          <td class="muted" style="width:6.5rem">{{ p.date }}</td>
+          <td><a href="{{ url_for('receipt_view', purchase_id=p.id) }}">{{ p.supplier or p.note or 'Przyjęcie' }}</a> <small>{{ p.lines }} poz.</small></td>
+          <td class="r">{{ (p.total or 0)|money }}</td>
+        </tr>
+      {% else %}
+        <tr><td class="empty">Brak.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% if stats.missing_price %}
+  {% set n = stats.missing_price|length %}
+  <div class="note warn" style="margin-top:1rem">
+    <b>{{ 'Pozycja' if n == 1 else 'Pozycje' }} na stanie bez ceny ({{ n }})</b> – koszt przepisów i produkcji z {{ 'jej' if n == 1 else 'ich' }} udziałem jest niepełny.
+    Uzupełnij „Cenę referencyjną” na karcie składnika:
+    {% for r in stats.missing_price %}<a href="{{ url_for('ingredient_card', ingredient_id=r.id) }}">{{ r.name }}{% if r.manufacturer %} · {{ r.manufacturer }}{% endif %}</a>
+      <small>({{ r.qty|num(1) }} {{ r.unit }})</small>{{ ', ' if not loop.last }}{% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

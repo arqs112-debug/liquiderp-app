@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block back %}{{ url_for('productions') }}{% endblock %}
+{% block title %}Produkcja{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Zrób liquid</h1>
+  <div class="actions"><button class="btn primary" form="prodForm"><svg><use href="#i-make"/></svg>Zrób i zdejmij z magazynu</button>
+    <a class="btn" href="{{ url_for('productions') }}"><svg><use href="#i-clock"/></svg>Historia produkcji</a></div>
+</div>
+
+<form method="post" id="prodForm" autocomplete="off">
+<div class="cols recipe">
+  <div class="side">
+    <div class="card">
+      <h2>Co robisz</h2>
+      <div class="fields three">
+        <label class="wide">Przepis
+          <input id="recipeName" list="recipeList" placeholder="zacznij pisać nazwę przepisu…" required>
+          <input type="hidden" name="recipe_id" id="recipeId">
+        </label>
+        <label>Ilość (ml) <input name="amount_ml" id="amount" value="{{ form.get('amount_ml', '') }}" inputmode="decimal"></label>
+        <label>Nikotyna (mg/ml) <input name="nicotine_mg" id="nicotine" value="{{ form.get('nicotine_mg', '') }}" inputmode="decimal"></label>
+        <label>Data <input type="date" name="date" value="{{ form.get('date') or today }}"></label>
+        <label>PG %
+          <span class="stepper"><button type="button" data-target="pg" data-step="-0.5" title="PG −0,5% (strzałka w dół)">−</button><input name="pg_pct" id="pg_pct" value="{{ form.get('pg_pct', '') }}" inputmode="decimal"><button type="button" data-target="pg" data-step="0.5" title="PG +0,5% (strzałka w górę)">+</button></span>
+        </label>
+        <label>VG %
+          <span class="stepper"><button type="button" data-target="vg" data-step="-0.5" title="VG −0,5%">−</button><input id="vg_pct" inputmode="decimal"><button type="button" data-target="vg" data-step="0.5" title="VG +0,5%">+</button></span>
+        </label>
+        <label class="check" id="saveRatioBox" hidden title="Po zapisaniu produkcji ustawi tę proporcję jako domyślną w przepisie">
+          <input type="checkbox" name="save_ratio" value="1"> zapisz proporcję w przepisie</label>
+        <label class="wide">Notatka <input name="note" value="{{ form.get('note', '') }}" placeholder="np. dla kogo, numer partii"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Butelki</h2>
+      {% if bottles %}
+        <table class="grid lines"><tbody id="bottleRows"></tbody></table>
+        <div class="formfoot left"><button type="button" class="btn" id="addBottle">+ Butelka</button></div>
+      {% else %}
+        <p class="muted">Nie masz jeszcze butelek w magazynie. Dodaj je <a href="{{ url_for('receipt_new') }}">przyjęciem</a>
+          (kategoria „Butelka”, z pojemnością na karcie składnika).</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="side sticky">
+    <div class="card">
+      <h2>Podsumowanie</h2>
+      <div class="measure-toggle" title="Którą wartość odczytujesz przy mieszaniu – zostanie wyróżniona"><button type="button" data-measure="ml">Odmierzam ml</button><button type="button" data-measure="g">Ważę g</button></div>
+      <div id="warnings"></div>
+      <table class="grid compact calc">
+        <thead><tr><th>Składnik</th><th class="r v-ml">Objętość</th><th class="r v-g">Waga</th><th class="r v-cum" title="Ile powinna pokazać waga po dodaniu składnika, gdy ważysz wszystko do jednej butelki">Na wadze Σ</th><th class="r">Koszt</th><th class="r">Stan</th></tr></thead>
+        <tbody id="calcRows"></tbody>
+      </table>
+      <div class="summary" id="summary"></div>
+    </div>
+    <label class="check" id="forceBox" hidden><input type="checkbox" name="force" value="1"> produkuj mimo braków (stany zejdą poniżej zera)</label>
+    <div class="formfoot"><button class="btn primary" id="makeBtn">Zrób i zdejmij z magazynu</button></div>
+  </div>
+</div>
+</form>
+
+<template id="bottleTpl">
+  <tr>
+    <td><select name="bottle_id"><option value="">– wybierz butelkę –</option>
+      {% for b in bottles %}<option value="{{ b.id }}">{{ b.label }}{% if b.capacity_ml %} · {{ b.capacity_ml|num }} ml{% endif %} (stan {{ b.stock|num(0) }})</option>{% endfor %}
+    </select></td>
+    <td style="width:7rem"><div class="unitbox"><input name="bottle_count" inputmode="numeric" value="1"><span class="unit">szt</span></div></td>
+    <td style="width:2rem"><button type="button" class="link danger remove" title="Usuń">✕</button></td>
+  </tr>
+</template>
+<datalist id="recipeList">{% for r in recipes %}<option value="{{ r.label }}">{% endfor %}</datalist>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const RECIPES = {{ recipes|tojson }};
+  const BOTTLES = {{ bottles|tojson }};
+  const POSTED = {{ {'bottle_id': form.getlist('bottle_id') if form else [], 'bottle_count': form.getlist('bottle_count') if form else []}|tojson }};
+  const byLabel = new Map(RECIPES.map(r => [r.label.toLowerCase(), r]));
+  const form = document.getElementById('prodForm');
+  const name = document.getElementById('recipeName'), rid = document.getElementById('recipeId');
+  const amount = document.getElementById('amount'), nicotine = document.getElementById('nicotine');
+  const tbody = document.getElementById('bottleRows');
+  const fmt = (v, d = 2) => v.toLocaleString('pl-PL', {maximumFractionDigits: d});
+  const money = v => v.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
+  const num = s => { const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(v) ? 0 : v; };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  let lastData = null;
+
+  function pickRecipe(r, keepValues) {
+    rid.value = r ? r.id : '';
+    name.classList.toggle('invalid', !!name.value.trim() && !r);
+    if (r && !keepValues) { amount.value = fmt(r.amount_ml); nicotine.value = fmt(r.nicotine_mg); setPg(r.pg_pct, false); suggestBottles(); }
+    if (r) recipePg = r.pg_pct;
+    ratioChanged();
+  }
+  name.addEventListener('change', () => { pickRecipe(byLabel.get(name.value.trim().toLowerCase())); changed(); });
+  name.addEventListener('input', () => { const r = byLabel.get(name.value.trim().toLowerCase()); if (r) pickRecipe(r); });
+
+  // Liczba butelek dopasowuje się do ilości, dopóki jej nie zmienisz ręcznie.
+  function suggest(tr) {
+    const b = BOTTLES.find(x => String(x.id) === tr.querySelector('[name=bottle_id]').value);
+    const count = tr.querySelector('[name=bottle_count]');
+    if (b && b.capacity_ml && !count.dataset.manual) count.value = Math.max(1, Math.ceil(num(amount.value) / b.capacity_ml));
+  }
+  function suggestBottles() { if (tbody && tbody.children.length === 1) suggest(tbody.firstElementChild); }
+
+  function addBottle(id, count) {
+    const tr = document.getElementById('bottleTpl').content.firstElementChild.cloneNode(true);
+    tbody.appendChild(tr);
+    if (id) tr.querySelector('[name=bottle_id]').value = id;
+    if (count) { tr.querySelector('[name=bottle_count]').value = count; tr.querySelector('[name=bottle_count]').dataset.manual = 1; }
+    tr.querySelector('[name=bottle_id]').addEventListener('change', () => { suggest(tr); changed(); });
+    tr.querySelector('[name=bottle_count]').addEventListener('input', e => { e.target.dataset.manual = 1; });
+    tr.querySelector('.remove').addEventListener('click', () => { tr.remove(); changed(); });
+    return tr;
+  }
+  if (tbody) {
+    document.getElementById('addBottle').addEventListener('click', () => { addBottle(); changed(); });
+    if (POSTED.bottle_id.length) POSTED.bottle_id.forEach((id, i) => addBottle(id, POSTED.bottle_count[i]));
+    else addBottle();
+  }
+  amount.addEventListener('input', suggestBottles);
+
+  let timer, requestSeq = 0;
+  function changed() { clearTimeout(timer); timer = setTimeout(update, 250); }
+
+  // PG/VG: proporcja z przepisu, którą można zmienić tylko dla tej produkcji (strzałki ±0,5%, Shift ±5%).
+  const pg = document.getElementById('pg_pct'), vg = document.getElementById('vg_pct');
+  let recipePg = null;
+  function ratioChanged() {
+    const differs = recipePg !== null && pg.value !== '' && Math.abs(num(pg.value) - recipePg) > 1e-9;
+    document.getElementById('saveRatioBox').hidden = !differs;
+    pg.classList.toggle('changed', differs); vg.classList.toggle('changed', differs);
+  }
+  function setPg(v, notify = true) {
+    v = Math.min(100, Math.max(0, Math.round(v * 100) / 100));
+    pg.value = fmt(v); vg.value = fmt(100 - v);
+    ratioChanged();
+    if (notify) changed();
+  }
+  pg.addEventListener('input', () => { vg.value = fmt(100 - num(pg.value)); ratioChanged(); });
+  vg.addEventListener('input', () => { pg.value = fmt(100 - num(vg.value)); ratioChanged(); changed(); });
+  document.querySelectorAll('.stepper button').forEach(btn => {
+    let delay, repeat;
+    const stop = () => { clearTimeout(delay); clearInterval(repeat); };
+    btn.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const step = num(btn.dataset.step) * (e.shiftKey ? 10 : 1) * (btn.dataset.target === 'vg' ? -1 : 1);
+      setPg(num(pg.value) + step);
+      delay = setTimeout(() => { repeat = setInterval(() => setPg(num(pg.value) + step), 80); }, 400);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, stop));
+  });
+  [[pg, 1], [vg, -1]].forEach(([field, dir]) => field.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setPg(num(pg.value) + (e.key === 'ArrowUp' ? 0.5 : -0.5) * (e.shiftKey ? 10 : 1) * dir);
+    }
+  }));
+  if (pg.value) vg.value = fmt(100 - num(pg.value));
+
+  async function update() {
+    const box = document.getElementById('warnings');
+    const seq = ++requestSeq;
+    if (!rid.value) { box.innerHTML = '<div class="note info">Wybierz przepis.</div>'; render(null); return; }
+    const res = await fetch('{{ url_for("api_production_preview") }}', {method: 'POST', body: new FormData(form)});
+    const d = await res.json();
+    if (seq !== requestSeq) return;  // przyszła już nowsza odpowiedź
+    if (d.error) { box.innerHTML = `<div class="note error">${esc(d.error)}</div>`; render(null); return; }
+    const w = d.warnings.map(t => ['warn', esc(t)]);
+    if (d.missing.length) w.push(['error', 'Brakuje na magazynie: ' + d.missing.map(m => `${esc(m.name)} (${fmt(m.missing)} ${m.unit || 'ml'})`).join(', ')]);
+    if (d.no_price.length) w.push(['info', 'Bez ceny (koszt niepełny): ' + d.no_price.map(esc).join(', ')]);
+    box.innerHTML = w.map(([k, t]) => `<div class="note ${k}">${t}</div>`).join('');
+    render(d);
+  }
+
+  const ROLE = {nicotine: 'baza', aroma: '', pg: 'PG', vg: 'VG'};
+  function render(d) {
+    lastData = d;
+    const rows = document.getElementById('calcRows'), summary = document.getElementById('summary');
+    document.getElementById('forceBox').hidden = !(d && d.missing.length);
+    if (!d) { rows.innerHTML = ''; summary.innerHTML = ''; return; }
+    let cum = 0;
+    rows.innerHTML = d.lines.map(l => `
+      <tr class="${l.missing ? 'short' : ''}">
+        <td>${esc(l.name)}${ROLE[l.role] ? ` <span class="tag group">${ROLE[l.role]}</span>` : ''}${l.manufacturer ? `<small>${esc(l.manufacturer)}</small>` : ''}</td>
+        <td class="r v-ml">${fmt(l.ml)}<small> ml</small></td><td class="r v-g">${fmt(l.g)}<small> g</small></td><td class="r v-cum">${fmt(cum += l.g)}<small> g</small></td>
+        <td class="r">${l.cost == null ? '<span class="muted">–</span>' : money(l.cost)}</td>
+        <td class="r ${l.missing ? 'neg' : 'muted'}">${fmt(l.stock, 1)}</td>
+      </tr>`).join('') + d.bottles.map(b => `
+      <tr class="${b.missing ? 'short' : ''}">
+        <td>${esc(b.name)} <span class="tag group">butelka</span></td>
+        <td class="r"><strong>${b.count} szt</strong></td><td></td><td class="v-cum"></td>
+        <td class="r">${money(b.cost)}</td>
+        <td class="r ${b.missing ? 'neg' : 'muted'}">${fmt(b.stock, 0)}</td>
+      </tr>`).join('');
+    const t = d.totals;
+    summary.innerHTML = t.ml ? `
+      <div><span class="muted">Ilość</span><strong>${fmt(t.ml)} ml</strong><small>${fmt(t.g)} g</small></div>
+      <div><span class="muted">PG/VG · nikotyna</span><strong>${fmt(t.pg_pct, 1)}/${fmt(t.vg_pct, 1)}</strong><small>${fmt(t.nicotine_mg)} mg/ml</small></div>
+      <div><span class="muted">Koszt</span><strong>${money(t.cost)}</strong><small>płyn ${money(t.cost_liquid)} · butelki ${money(t.cost_bottles)}</small></div>
+      <div><span class="muted">Koszt / ml</span><strong>${money(t.cost_per_ml)}</strong>${t.cost_complete ? '' : '<small>niepełny</small>'}</div>` : '';
+  }
+
+  form.addEventListener('input', changed);
+  form.addEventListener('change', changed);
+  form.addEventListener('submit', e => {
+    if (!rid.value) { e.preventDefault(); alert('Wybierz przepis z listy.'); name.focus(); return; }
+    const force = form.querySelector('[name=force]').checked;
+    if (lastData && lastData.missing.length && !force) {
+      e.preventDefault();
+      alert('Brakuje składników na magazynie. Uzupełnij stany albo zaznacz „produkuj mimo braków”.');
+    }
+  });
+
+  const pre = RECIPES.find(r => r.id === {{ preselect|tojson }});
+  if (pre) { name.value = pre.label; pickRecipe(pre, {{ (form.get('amount_ml') is not none and form.get('amount_ml') != '')|tojson }}); }
+  update();
+})();
+</script>
+{% endblock %}

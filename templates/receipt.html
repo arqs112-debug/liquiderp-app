@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block back %}{{ url_for('receipts') }}{% endblock %}
+{% block title %}Przyjęcie{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Przyjęcie na magazyn</h1>
+  <div class="actions"><button class="btn primary" form="receipt"><svg><use href="#i-save"/></svg>Zapisz przyjęcie</button>
+    <button type="button" class="btn" id="mailToggle"><svg><use href="#i-mail"/></svg>Wklej z maila</button>
+    <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>Historia przyjęć</a></div>
+</div>
+
+<div class="card" id="mailBox" hidden>
+  <h2>Przyjęcie z maila</h2>
+  <p class="muted hint" style="margin:0 0 .6rem">Otwórz w poczcie potwierdzenie zamówienia, zaznacz całą treść (Ctrl+A), skopiuj (Ctrl+C)
+    i wklej tutaj. Program wypełni formularz poniżej – sprawdzisz go przed zapisem.</p>
+  <textarea id="mailText" rows="7" placeholder="Wklej treść maila z potwierdzeniem zamówienia…"></textarea>
+  <div class="formfoot" style="justify-content:space-between;align-items:center">
+    <span id="mailStatus" class="muted"></span>
+    <button type="button" class="btn primary" id="mailParse">Rozpoznaj pozycje</button>
+  </div>
+</div>
+
+<form method="post" class="card" id="receipt" autocomplete="off" data-dirty-check>
+  <div class="fields three">
+    <label>Data <input type="date" name="date" value="{{ today }}"></label>
+    <label>Sklep <input name="supplier" list="suppliers" placeholder="np. Aromatyczne.pl"></label>
+    <label>Uwagi <input name="note" placeholder="nr zamówienia, kod rabatowy…"></label>
+  </div>
+
+  <table class="grid lines">
+    <thead>
+      <tr>
+        <th style="width:9rem">Kategoria</th><th>Nazwa</th><th style="width:11rem">Producent</th>
+        <th class="r" style="width:7rem">Opakowanie</th><th class="r" style="width:5rem">Sztuk</th>
+        <th class="r" style="width:7rem">Cena / opak.</th><th class="r" style="width:7rem">Razem</th><th style="width:2rem"></th>
+      </tr>
+    </thead>
+    <tbody id="lines"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6"><button type="button" class="btn" id="addLine">+ Pozycja</button>
+          <span class="muted hint">Nowa nazwa = nowy składnik (aromat domyślnie 100% PG). Ilość = opakowanie × sztuk.</span></td>
+        <td class="r"><strong id="grand">0,00 {{ CURRENCY }}</strong></td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="formfoot"><button class="btn primary">Zapisz przyjęcie</button></div>
+</form>
+
+<template id="lineTpl">
+  <tr>
+    <td><select name="category">
+      {% for key, cat in CATEGORIES.items() %}<option value="{{ key }}">{{ cat.single }}</option>{% endfor %}
+    </select></td>
+    <td><div class="namebox"><input name="name" placeholder="nazwa"><span class="tag status"></span></div>
+      <input type="hidden" name="source_name"><div class="source desc"></div></td>
+    <td><input name="manufacturer" list="manufacturers"></td>
+    <td class="r"><div class="unitbox"><input name="pack_size" inputmode="decimal"><span class="unit">ml</span></div></td>
+    <td><input name="pack_count" value="1" inputmode="numeric" class="r"></td>
+    <td><div class="unitbox"><input name="pack_price" inputmode="decimal"><span class="unit">{{ CURRENCY }}</span></div></td>
+    <td class="r line-total">–</td>
+    <td><button type="button" class="link danger remove" title="Usuń pozycję">✕</button></td>
+  </tr>
+</template>
+
+{% for key in CATEGORIES %}
+  <datalist id="dl-{{ key }}"></datalist>
+{% endfor %}
+<datalist id="manufacturers">{% for m in manufacturers %}<option value="{{ m }}">{% endfor %}</datalist>
+<datalist id="suppliers">{% for s in suppliers %}<option value="{{ s }}">{% endfor %}</datalist>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const ING = {{ ingredients_json|safe }};
+  const LAST = {{ last_packs_json|safe }};
+  const CATS = {{ CATEGORIES|tojson }};
+  const tbody = document.getElementById('lines');
+  const tpl = document.getElementById('lineTpl');
+  const num = s => { const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(v) ? 0 : v; };
+  const money = v => v.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
+  const key = s => s.trim().toLowerCase();
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+  // Podpowiedzi nazw osobno dla każdej kategorii.
+  for (const cat in CATS) {
+    const names = [...new Set(ING.filter(i => i.category === cat).map(i => i.name))];
+    document.getElementById('dl-' + cat).innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
+  }
+
+  function match(tr) {
+    const f = field(tr);
+    const name = key(f.name.value), man = key(f.manufacturer.value);
+    return ING.find(i => i.category === f.category.value && key(i.name) === name && key(i.manufacturer) === man);
+  }
+  const field = tr => Object.fromEntries([...tr.querySelectorAll('[name]')].map(el => [el.name, el]));
+
+  function refresh(tr) {
+    const f = field(tr);
+    const cat = f.category.value;
+    f.name.setAttribute('list', 'dl-' + cat);
+    tr.querySelector('.unit').textContent = CATS[cat].unit;
+    const status = tr.querySelector('.status');
+    if (!f.name.value.trim()) { status.textContent = ''; status.className = 'tag status'; }
+    else if (match(tr) && tr.dataset.check) { status.textContent = 'sprawdź'; status.className = 'tag status warn'; }
+    else if (match(tr)) { status.textContent = 'w magazynie'; status.className = 'tag status ok'; }
+    else { status.textContent = 'nowy'; status.className = 'tag status new'; }
+    const total = num(f.pack_count.value) * num(f.pack_price.value);
+    tr.querySelector('.line-total').textContent = total ? money(total) : '–';
+    let sum = 0;
+    tbody.querySelectorAll('tr').forEach(r => { const g = field(r); sum += num(g.pack_count.value) * num(g.pack_price.value); });
+    document.getElementById('grand').textContent = money(sum);
+  }
+
+  function onName(tr) {
+    const f = field(tr);
+    const cat = f.category.value, name = key(f.name.value);
+    const same = ING.filter(i => i.category === cat && key(i.name) === name);
+    // Jeśli nazwa jest jednoznaczna, uzupełnij producenta.
+    if (same.length === 1 && !f.manufacturer.value) f.manufacturer.value = same[0].manufacturer;
+    const m = match(tr);
+    if (m && LAST[m.id]) {
+      if (!f.pack_size.value) f.pack_size.value = String(LAST[m.id].size).replace('.', ',');
+      if (!f.pack_price.value) f.pack_price.value = LAST[m.id].price.toFixed(2).replace('.', ',');
+    }
+    // Dopisz pustą pozycję, gdy wypełniono ostatnią.
+    if (tr === tbody.lastElementChild && f.name.value.trim()) addLine(cat);
+    refresh(tr);
+  }
+
+  function addLine(cat, ing, extra) {
+    const tr = tpl.content.firstElementChild.cloneNode(true);
+    const f = field(tr);
+    f.category.value = cat || 'aroma';
+    if (ing) { f.category.value = ing.category; f.name.value = ing.name; f.manufacturer.value = ing.manufacturer; }
+    if (extra) {
+      if (extra.pack_size) f.pack_size.value = String(extra.pack_size).replace('.', ',');
+      f.pack_count.value = extra.pack_count || 1;
+      if (extra.pack_price != null) f.pack_price.value = extra.pack_price.toFixed(2).replace('.', ',');
+      f.source_name.value = extra.source_name || '';
+      tr.querySelector('.source').textContent = extra.source_name ? 'z maila: ' + extra.source_name : '';
+      tr.querySelector('.source').title = extra.source_name || '';
+      if (extra.match === 'fuzzy') tr.dataset.check = '1';
+    }
+    tbody.appendChild(tr);
+    f.category.addEventListener('change', () => refresh(tr));
+    f.name.addEventListener('change', () => onName(tr));
+    f.name.addEventListener('input', () => { delete tr.dataset.check; refresh(tr); });
+    f.manufacturer.addEventListener('input', () => refresh(tr));
+    f.manufacturer.addEventListener('change', () => onName(tr));
+    for (const n of ['pack_size', 'pack_count', 'pack_price']) f[n].addEventListener('input', () => refresh(tr));
+    tr.querySelector('.remove').addEventListener('click', () => {
+      tr.remove();
+      if (!tbody.children.length) addLine();
+      refresh(tbody.lastElementChild);
+    });
+    if (ing && !extra) onName(tr); else refresh(tr);
+    return tr;
+  }
+
+  // Przyjęcie z maila: serwer rozpoznaje pozycje i dopasowuje je do składników.
+  const mailBox = document.getElementById('mailBox'), mailText = document.getElementById('mailText');
+  const mailStatus = document.getElementById('mailStatus');
+  document.getElementById('mailToggle').addEventListener('click', () => {
+    mailBox.hidden = !mailBox.hidden;
+    if (!mailBox.hidden) mailText.focus();
+  });
+  document.getElementById('mailParse').addEventListener('click', async () => {
+    const body = new FormData();
+    body.append('text', mailText.value);
+    const res = await fetch('{{ url_for("api_receipt_from_mail") }}', {method: 'POST', body});
+    const d = await res.json();
+    if (!d.lines.length) {
+      mailStatus.textContent = 'Nie znalazłem pozycji zamówienia. Sprawdź, czy skopiowana jest tabela z produktami.';
+      mailStatus.className = 'neg';
+      return;
+    }
+    const form = document.getElementById('receipt');
+    if (d.date) form.querySelector('[name=date]').value = d.date;
+    if (d.supplier) form.querySelector('[name=supplier]').value = d.supplier;
+    if (d.note) form.querySelector('[name=note]').value = d.note;
+    [...tbody.querySelectorAll('tr')].filter(tr => !field(tr).name.value.trim()).forEach(tr => tr.remove());
+    for (const l of d.lines) addLine(l.category, {category: l.category, name: l.name, manufacturer: l.manufacturer}, l);
+    addLine(d.lines[d.lines.length - 1].category);
+    form.dispatchEvent(new Event('change'));  // niezapisane – Esc zapyta przed wyjściem
+    const counts = {fuzzy: 0, new: 0};
+    d.lines.forEach(l => { if (l.match in counts) counts[l.match]++; });
+    let msg = `Rozpoznano ${d.lines.length} poz. na ${money(d.items_total)}`;
+    if (d.total != null && Math.abs(d.total - d.items_total) > 0.01) msg += ` (w mailu razem ${money(d.total)} – sprawdź wysyłkę lub rabat)`;
+    if (counts.new) msg += ` · nowe: ${counts.new}`;
+    if (counts.fuzzy) msg += ` · do sprawdzenia: ${counts.fuzzy}`;
+    mailStatus.textContent = '';
+    mailBox.hidden = true;
+    document.getElementById('mailToggle').textContent = 'Wklej z maila (' + d.lines.length + ' poz.)';
+    form.querySelectorAll('.mailnote').forEach(n => n.remove());
+    form.insertAdjacentHTML('afterbegin', `<div class="note mailnote ${counts.fuzzy ? 'warn' : 'info'}">${esc(msg)}. Sprawdź i zapisz.</div>`);
+  });
+
+  document.getElementById('addLine').addEventListener('click', () => {
+    const last = tbody.lastElementChild;
+    field(addLine(last ? field(last).category.value : 'aroma')).name.focus();
+  });
+
+  document.getElementById('receipt').addEventListener('submit', e => {
+    const bad = [...tbody.querySelectorAll('tr')].filter(tr => {
+      const f = field(tr);
+      return f.name.value.trim() && (num(f.pack_size.value) <= 0 || num(f.pack_count.value) <= 0);
+    });
+    if (bad.length) { e.preventDefault(); alert('Uzupełnij pojemność opakowania i liczbę sztuk.'); field(bad[0]).pack_size.focus(); }
+  });
+
+  const pre = ING.find(i => i.id === {{ preselect|tojson }});
+  addLine(pre ? pre.category : 'aroma', pre);
+  if (pre) field(tbody.firstElementChild).pack_count.focus(); else field(tbody.firstElementChild).name.focus();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pl"{% if SETTINGS.theme == 'light' %} data-theme="light"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Witaj · LiquidERP</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="wizard-body">
+<main class="wizard">
+  <div class="wizard-brand"><img src="{{ url_for('static', filename='icon-512.png') }}" alt=""><span>LiquidERP <small>{{ VERSION }}</small></span></div>
+  <ol class="wizard-steps" id="steps">
+    <li class="on">Powitanie</li><li>Dane</li><li>Przepisy</li><li>Bazy</li>
+  </ol>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for kind, msg in messages %}<div class="flash {{ kind }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <form method="post" enctype="multipart/form-data" class="card wizard-card" id="wizard" autocomplete="off">
+    <section data-step="0">
+      <h2>Witaj w LiquidERP!</h2>
+      <p>To domowy program dla osób, które same robią liquidy. Pomaga:</p>
+      <ul class="wizard-list">
+        <li><b>prowadzić magazyn</b> aromatów, baz i butelek – ze stanami, minimami i średnią ceną,</li>
+        <li><b>przyjmować zakupy</b> – ręcznie albo wklejając potwierdzenie zamówienia z maila,</li>
+        <li><b>układać przepisy</b> z wyliczeniem na żywo (ml, gramy, PG/VG, nikotyna, koszt),</li>
+        <li><b>robić liquid</b> z odjęciem składników ze stanów i prowadzić listę zakupów.</li>
+      </ul>
+      <p class="muted">Wszystkie dane zostają na tym komputerze. Kilka pytań na start – każde ustawienie zmienisz później w Narzędzia › Ustawienia.</p>
+    </section>
+
+    <section data-step="1" hidden>
+      <h2>Od czego zaczynamy?</h2>
+      <label class="choice"><input type="radio" name="start" value="zero" {{ 'checked' if not form or form.start != 'import' }}>
+        <span><b>Zaczynam od zera</b><small>Pusty magazyn – składniki dodasz przyjęciem albo ręcznie.</small></span></label>
+      <label class="choice"><input type="radio" name="start" value="import" {{ 'checked' if form and form.start == 'import' }}>
+        <span><b>Mam dane w EJuiceCalculatorze</b><small>Przeniosę składniki, stany, ceny, przepisy i historię z pliku XML (zwykle <code>Baza.xml</code>
+          w folderze programu). Oryginalny plik nie jest zmieniany.</small></span></label>
+      <div class="fields" id="importBox" hidden>
+        <label class="wide">Plik z danymi EJuiceCalculatora <input type="file" name="file" accept=".xml,text/xml"></label>
+      </div>
+      {% if not empty %}<p class="note warn">W programie są już dane – import jest możliwy tylko do pustej bazy (albo z menu Import danych z opcją „zastąp”).</p>{% endif %}
+    </section>
+
+    <section data-step="2" hidden>
+      <h2>Domyślne parametry przepisu</h2>
+      <p class="muted" style="margin-top:0">Tak będzie wyglądał każdy nowy przepis – potem zmienisz go w edytorze.</p>
+      <div class="fields three">
+        <label>Ilość (ml) <input name="amount_ml" value="{{ form.amount_ml if form else '50' }}" inputmode="decimal"></label>
+        <label>PG % <input name="pg_pct" id="wPg" value="{{ form.pg_pct if form else '30' }}" inputmode="decimal"></label>
+        <label>VG % <input id="wVg" value="70" inputmode="decimal"></label>
+        <label>Nikotyna (mg/ml) <input name="nicotine_mg" value="{{ form.nicotine_mg if form else '3' }}" inputmode="decimal"></label>
+        <label class="span2">Przy mieszaniu
+          <select name="measure">
+            <option value="ml">odmierzam ml (strzykawka, cylinder)</option>
+            <option value="g" {{ 'selected' if form and form.measure == 'g' }}>ważę g (waga, narastająco)</option>
+          </select></label>
+      </div>
+    </section>
+
+    <section data-step="3" hidden>
+      <h2>Bazy do przepisów</h2>
+      <p class="muted" style="margin-top:0">Dodać od razu podstawowe składniki? Trafią do magazynu ze stanem 0 i będą wybrane w nowych przepisach.
+        Jeśli importujesz dane, istniejące składniki o tej samej nazwie zostaną użyte zamiast nowych.</p>
+      <div class="wizard-bases">
+        <label class="check"><input type="checkbox" name="add_pg" value="1" checked> <b>PG</b> (glikol propylenowy)</label>
+        <input name="pg_maker" placeholder="producent (opcjonalnie)">
+        <label class="check"><input type="checkbox" name="add_vg" value="1" checked> <b>VG</b> (gliceryna roślinna)</label>
+        <input name="vg_maker" placeholder="producent (opcjonalnie)">
+        <label class="check"><input type="checkbox" name="add_base" value="1" checked> <b>Baza nikotynowa</b></label>
+        <input name="base_maker" placeholder="producent (opcjonalnie)">
+      </div>
+      <div class="fields three" style="margin-top:.8rem">
+        <label>Moc bazy (mg/ml) <input name="base_mg" value="18" inputmode="decimal"></label>
+        <label>PG bazy % <input name="base_pg" value="50" inputmode="decimal"></label>
+      </div>
+    </section>
+
+    <div class="formfoot wizard-foot">
+      <button type="submit" class="link muted" form="skipForm" title="Przejdź od razu do programu">Pomiń kreator</button>
+      <span style="flex:1"></span>
+      <button type="button" class="btn" id="prev" hidden>Wstecz</button>
+      <button type="button" class="btn primary" id="next">Dalej</button>
+      <button type="submit" class="btn primary" id="finish" hidden>Zakończ i otwórz program</button>
+    </div>
+  </form>
+  <form method="post" action="{{ url_for('setup_skip') }}" id="skipForm"></form>
+</main>
+<script>
+(function () {
+  const sections = [...document.querySelectorAll('[data-step]')], steps = [...document.querySelectorAll('#steps li')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next'), finish = document.getElementById('finish');
+  const form = document.getElementById('wizard');
+  let cur = {{ 1 if form else 0 }};
+  function show(i) {
+    cur = i;
+    sections.forEach((s, n) => { s.hidden = n !== i; });
+    steps.forEach((s, n) => { s.className = n < i ? 'done' : (n === i ? 'on' : ''); });
+    prev.hidden = i === 0; next.hidden = i === sections.length - 1; finish.hidden = i !== sections.length - 1;
+  }
+  const importBox = document.getElementById('importBox'), file = form.querySelector('[name=file]');
+  const syncImport = () => {
+    const imp = form.start.value === 'import';
+    importBox.hidden = !imp; file.required = imp;
+  };
+  form.querySelectorAll('[name=start]').forEach(r => r.addEventListener('change', syncImport));
+  syncImport();
+  next.addEventListener('click', () => {
+    if (cur === 1 && form.start.value === 'import' && !file.files.length) { alert('Wybierz plik z danymi EJuiceCalculatora albo zacznij od zera.'); return; }
+    show(cur + 1);
+  });
+  prev.addEventListener('click', () => show(cur - 1));
+  form.addEventListener('submit', () => { finish.disabled = true; finish.textContent = 'Zapisuję…'; });
+
+  const pg = document.getElementById('wPg'), vg = document.getElementById('wVg');
+  const num = s => parseFloat(String(s).replace(',', '.'));
+  const fmt = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  vg.value = fmt(100 - (num(pg.value) || 0));
+  pg.addEventListener('input', () => { const v = num(pg.value); if (!isNaN(v) && v >= 0 && v <= 100) vg.value = fmt(100 - v); });
+  vg.addEventListener('input', () => { const v = num(vg.value); if (!isNaN(v) && v >= 0 && v <= 100) pg.value = fmt(100 - v); });
+  show(cur);
+})();
+</script>
+</body>
+</html>

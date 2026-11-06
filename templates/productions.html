@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Historia produkcji{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Historia produkcji</h1>
+  <div class="actions"><a class="btn primary" href="{{ url_for('production_new') }}"><svg><use href="#i-make"/></svg>Zrób liquid</a></div>
+</div>
+<table class="grid">
+  <thead><tr><th>Data</th><th>Przepis</th><th class="r">Ilość</th><th class="r">Nikotyna</th><th class="r">PG/VG</th>
+    <th class="r">Koszt</th><th class="r">Koszt / ml</th></tr></thead>
+  <tbody>
+  {% for p in rows %}
+    <tr onclick="location.href='{{ url_for('production_view', production_id=p.id) }}'">
+      <td><a href="{{ url_for('production_view', production_id=p.id) }}">{{ p.date }}</a></td>
+      <td>{{ p.recipe_name }}{% if p.forced %} <span class="tag warn" title="Zrobione mimo braków na magazynie">na minusie</span>{% endif %}
+        {% if p.note %}<div class="desc">{{ p.note }}</div>{% endif %}</td>
+      <td class="r">{{ p.amount_ml|num }} ml</td><td class="r">{{ p.nicotine_mg|num }} mg</td>
+      <td class="r">{{ p.pg_pct|num(0) }}/{{ p.vg_pct|num(0) }}</td>
+      <td class="r">{{ p.cost_total|money }}</td>
+      <td class="r">{{ (p.cost_total / p.amount_ml if p.amount_ml else 0)|money }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="empty">Nic jeszcze nie zrobiono w LiquidERP.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

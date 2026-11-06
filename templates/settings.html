@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Ustawienia{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Ustawienia</h1>
+  <div class="actions"><button class="btn primary" form="settingsForm"><svg><use href="#i-save"/></svg>Zapisz ustawienia</button></div>
+</div>
+
+<form method="post" id="settingsForm" autocomplete="off" data-dirty-check>
+<div class="cols">
+  <div>
+    <section class="card">
+      <h2>Wygląd i praca</h2>
+      <div class="fields">
+        <label>Motyw
+          <select name="theme">
+            <option value="dark" {{ 'selected' if cfg.theme != 'light' }}>ciemny</option>
+            <option value="light" {{ 'selected' if cfg.theme == 'light' }}>jasny</option>
+          </select></label>
+        <label title="Którą kolumnę wyróżniać w wyliczeniach przepisu i produkcji">Przy mieszaniu
+          <select name="measure">
+            <option value="ml" {{ 'selected' if cfg.measure != 'g' }}>Odmierzam ml (strzykawka, cylinder)</option>
+            <option value="g" {{ 'selected' if cfg.measure == 'g' }}>Ważę g (waga, narastająco)</option>
+          </select></label>
+        <label title="Symbol dopisywany do kwot, np. zł, €, Kč">Waluta
+          <input name="currency" value="{{ cfg.currency }}" maxlength="6" placeholder="zł"></label>
+        <label>Format liczb <input value="1 234,56 (polski)" disabled></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Nowy przepis – wartości domyślne</h2>
+      <div class="fields three">
+        <label>Ilość (ml) <input name="recipe_amount_ml" value="{{ cfg.recipe_amount_ml }}" inputmode="decimal"></label>
+        <label>PG % <input name="recipe_pg_pct" id="sPg" value="{{ cfg.recipe_pg_pct }}" inputmode="decimal"></label>
+        <label>VG % <input id="sVg" value="" inputmode="decimal"></label>
+        <label>Nikotyna (mg/ml) <input name="recipe_nicotine_mg" value="{{ cfg.recipe_nicotine_mg }}" inputmode="decimal"></label>
+        {% for key, label, cat in [('recipe_nicotine_id', 'Baza nikotynowa', 'nicotine'), ('recipe_pg_id', 'PG', 'pg'), ('recipe_vg_id', 'VG', 'vg')] %}
+          <label>{{ label }}
+            <select name="{{ key }}">
+              <option value="">– jak w ostatnim przepisie –</option>
+              {% for o in options[cat] %}<option value="{{ o.id }}" {{ 'selected' if cfg[key] == o.id|string }}>{{ o.label }}</option>{% endfor %}
+            </select></label>
+        {% endfor %}
+      </div>
+      {% if not options.nicotine or not options.pg or not options.vg %}
+        <p class="muted hint" style="margin:.6rem 0 0">Brakujące bazy dodasz <a href="{{ url_for('ingredient_new', kat='pg') }}">nowym składnikiem</a>
+          albo przyjęciem (kategorie „Baza nikotynowa”, „PG”, „VG”).</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div>
+    <section class="card">
+      <h2>PDF na telefon</h2>
+      <p class="muted hint" style="margin:0 0 .7rem">Program zapisuje plik „LiquidERP na telefon.pdf” (lista zakupów i stany, w formacie
+        wygodnym do czytania na telefonie) i odświeża go po każdej zmianie. Wybierz folder synchronizowany z telefonem –
+        np. OneDrive, Dysk Google albo Dropbox.</p>
+      <div class="fields">
+        <label class="check wide"><input type="checkbox" name="phone_pdf_enabled" value="1" {{ 'checked' if cfg.phone_pdf_enabled == '1' }}> zapisuj PDF na telefon</label>
+        <label class="wide">Folder
+          <span class="pickrow"><input name="phone_pdf_dir" id="phoneDir" value="{{ cfg.phone_pdf_dir }}" placeholder="{{ suggested_dir }}">
+            <button type="button" class="btn" id="pickDir">Wybierz…</button></span></label>
+      </div>
+      {% if cfg.phone_pdf_enabled == '1' %}
+        <div class="formfoot left"><button class="btn" formaction="{{ url_for('phone_pdf_now') }}">Zapisz PDF teraz</button></div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Kopie zapasowe</h2>
+      <div class="fields">
+        <label>Liczba przechowywanych kopii <input name="backup_keep" value="{{ cfg.backup_keep }}" inputmode="numeric"></label>
+        <label>&nbsp;<a class="btn" href="{{ url_for('backups') }}"><svg><use href="#i-archive"/></svg>Kopie zapasowe</a></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>O programie</h2>
+      <p style="margin:0 0 .4rem"><b>LiquidERP {{ VERSION }}</b> – domowy magazyn, receptury i produkcja liquidów. Licencja MIT.</p>
+      <p class="muted" style="margin:0 0 .4rem">Dane: <code>{{ data_dir }}</code></p>
+      <p class="muted" style="margin:0">Strona projektu i nowe wersje: <a href="{{ REPO_URL }}" target="_blank">{{ REPO_URL|replace('https://', '') }}</a>.
+        Uwagi zgłosisz przyciskiem „Zgłoś uwagę” w menu.</p>
+      <div class="formfoot left"><a class="btn" href="{{ url_for('setup_wizard', ponownie=1) }}">Uruchom kreator ponownie</a></div>
+    </section>
+  </div>
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const pg = document.getElementById('sPg'), vg = document.getElementById('sVg');
+  const num = s => parseFloat(String(s).replace(',', '.'));
+  const fmt = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  vg.value = isNaN(num(pg.value)) ? '' : fmt(100 - num(pg.value));
+  pg.addEventListener('input', () => { const v = num(pg.value); if (!isNaN(v) && v >= 0 && v <= 100) vg.value = fmt(100 - v); });
+  vg.addEventListener('input', () => { const v = num(vg.value); if (!isNaN(v) && v >= 0 && v <= 100) pg.value = fmt(100 - v); });
+
+  const dir = document.getElementById('phoneDir');
+  document.getElementById('pickDir').addEventListener('click', async () => {
+    const body = new FormData(); body.append('start', dir.value || dir.placeholder);
+    const d = await (await fetch('{{ url_for("api_pick_folder") }}', {method: 'POST', body})).json();
+    if (d.path) { dir.value = d.path; dir.dispatchEvent(new Event('input', {bubbles: true})); }
+    else if (d.error) alert(d.error);
+  });
+})();
+</script>
+{% endblock %}

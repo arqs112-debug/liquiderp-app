@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Stany magazynowe{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Stany magazynowe</h1>
+  <div class="actions">
+    <a class="btn primary" href="{{ url_for('receipt_new') }}"><svg><use href="#i-in"/></svg>Przyjęcie</a>
+    <a class="btn" href="{{ url_for('ingredient_new', kat=active_cat or 'aroma') }}"><svg><use href="#i-plus"/></svg>Nowy składnik</a>
+    <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>Historia przyjęć</a>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="chips" id="chips">
+    <button type="button" data-cat="" class="{{ 'on' if not active_cat }}">Wszystkie <span>{{ rows|length }}</span></button>
+    {% for key, cat in CATEGORIES.items() %}
+      <button type="button" data-cat="{{ key }}" class="{{ 'on' if active_cat == key }}">{{ cat.label }} <span>{{ counts[key] }}</span></button>
+    {% endfor %}
+  </div>
+  <input type="search" id="search" placeholder="Szukaj: nazwa, producent, opis…" autofocus>
+  <label class="check"><input type="checkbox" id="inactive" {{ 'checked' if show_inactive }}> nieaktywne</label>
+</div>
+
+<table class="grid" id="stock">
+  <thead>
+    <tr>
+      <th>Nazwa</th><th>Producent</th><th>Kategoria</th>
+      <th class="r">Stan</th><th class="r">Śr. koszt / jedn.</th><th class="r">Wartość</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr data-cat="{{ r.category }}" data-search="{{ (r.name ~ ' ' ~ r.manufacturer ~ ' ' ~ r.folder ~ ' ' ~ r.description)|lower }}"
+        data-value="{{ r.value }}" class="{{ 'low' if r.low }} {{ 'inactive' if not r.active }}"
+        onclick="location.href='{{ url_for('ingredient_card', ingredient_id=r.id) }}'">
+      <td data-sort="{{ r.name }}"><a href="{{ url_for('ingredient_card', ingredient_id=r.id) }}">{{ r.name }}</a>
+        {% if r.folder %}<span class="tag group">{{ r.folder }}</span>{% endif %}
+        {% if r.low %}<span class="tag warn" title="Poniżej stanu minimalnego {{ r.min_stock|num }} {{ r.unit }}">mało</span>{% endif %}
+        {% if r.description %}<div class="desc">{{ r.description|truncate(90) }}</div>{% endif %}</td>
+      <td>{{ r.manufacturer }}</td>
+      <td>{{ CATEGORIES[r.category].single }}</td>
+      <td class="r {{ 'neg' if r.qty < 0 }}" data-sort="{{ r.qty }}">{{ r.qty|num(1) }} {{ r.unit }}</td>
+      <td class="r {{ 'muted' if r.price_is_ref }}" data-sort="{{ r.price or '' }}" title="{{ 'Ostatnia znana cena (brak na stanie)' if r.price_is_ref }}">
+        {{ r.price|money if r.price else '–' }}{% if r.price %}<small>/{{ r.unit }}</small>{% endif %}</td>
+      <td class="r" data-sort="{{ r.value }}">{{ r.value|money }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="empty">Magazyn jest pusty. Zacznij od <a href="{{ url_for('receipt_new') }}">przyjęcia</a>.</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><td colspan="5" class="r">Wartość widocznych pozycji</td><td class="r" id="total">{{ total_value|money }}</td></tr>
+  </tfoot>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const rows = [...document.querySelectorAll('#stock tbody tr[data-cat]')];
+  const search = document.getElementById('search');
+  const total = document.getElementById('total');
+  let cat = {{ active_cat|tojson }};
+  const money = v => v.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + CUR;
+
+  function apply() {
+    const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+    let sum = 0;
+    for (const tr of rows) {
+      const show = (!cat || tr.dataset.cat === cat) && words.every(w => tr.dataset.search.includes(w));
+      tr.hidden = !show;
+      if (show) sum += parseFloat(tr.dataset.value) || 0;
+    }
+    total.textContent = money(sum);
+    const url = new URL(location);
+    cat ? url.searchParams.set('kat', cat) : url.searchParams.delete('kat');
+    history.replaceState(null, '', url);
+  }
+
+  document.getElementById('chips').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    cat = b.dataset.cat;
+    document.querySelectorAll('#chips button').forEach(x => x.classList.toggle('on', x === b));
+    apply();
+  });
+  search.addEventListener('input', apply);
+  document.getElementById('inactive').addEventListener('change', e => {
+    const url = new URL(location);
+    e.target.checked ? url.searchParams.set('nieaktywne', '1') : url.searchParams.delete('nieaktywne');
+    location.href = url;
+  });
+  apply();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pl"{% if SETTINGS.theme == 'light' %} data-theme="light"{% endif %} data-measure="{{ 'g' if SETTINGS.measure == 'g' else 'ml' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}LiquidERP{% endblock %} · LiquidERP</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    // Zwinięte menu ustawiamy przed narysowaniem strony, żeby nie mrugało (motyw i tryb ml/g są w Ustawieniach).
+    window.CUR = {{ CURRENCY|tojson }};
+    try {
+      if (localStorage.getItem('sidebar') === 'collapsed') document.documentElement.classList.add('side-collapsed');
+    } catch (e) {}
+  </script>
+</head>
+<body data-back="{% block back %}{% endblock %}">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></symbol>
+      <symbol id="i-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+      <symbol id="i-flask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M9 3h6M10 3v6L4.3 18.6A1.6 1.6 0 0 0 5.7 21h12.6a1.6 1.6 0 0 0 1.4-2.4L14 9V3"/><path d="M7 15h10"/></symbol>
+      <symbol id="i-make" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M6 3h12M8 3v14a4 4 0 0 0 4 4 4 4 0 0 0 4-4V3"/><path d="M8 12h8"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V9m0 0l-4 4m4-4l4 4"/><path d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/></symbol>
+      <symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.5 6.5 0 0 0 10 10z"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.2v.1"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/></symbol>
+      <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+      <symbol id="i-bubble" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></symbol>
+      <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/></symbol>
+    </defs>
+  </svg>
+  {% set ep = request.endpoint %}
+  {% set nav = [
+    ('Ogólne', [('dashboard', 'Pulpit', 'i-home', ('dashboard',))]),
+    ('Magazyn', [('inventory', 'Stany magazynowe', 'i-box', ('inventory', 'ingredient_card', 'ingredient_new')),
+                 ('receipt_new', 'Nowe przyjęcie', 'i-in', ('receipt_new',)),
+                 ('receipts', 'Historia przyjęć', 'i-list', ('receipts', 'receipt_view')),
+                 ('shopping', 'Lista zakupów', 'i-cart', ('shopping',))]),
+    ('Receptury', [('recipes', 'Przepisy', 'i-flask', ('recipes', 'recipe_edit'))]),
+    ('Produkcja', [('production_new', 'Zrób liquid', 'i-make', ('production_new',)),
+                   ('productions', 'Historia produkcji', 'i-clock', ('productions', 'production_view'))]),
+    ('Narzędzia', [('import_page', 'Import danych', 'i-up', ('import_page',)),
+                   ('backups', 'Kopie zapasowe', 'i-archive', ('backups',)),
+                   ('settings_page', 'Ustawienia', 'i-gear', ('settings_page',))]),
+  ] %}
+  {% set ns = namespace(group='', page='') %}
+  {% for group, items in nav %}{% for target, label, icon, eps in items %}{% if ep in eps %}{% set ns.group = group %}{% set ns.page = label %}{% endif %}{% endfor %}{% endfor %}
+  <div class="shell" id="shell">
+    <aside class="sidebar">
+      <a class="side-brand" href="{{ url_for('dashboard') }}"><img src="{{ url_for('static', filename='favicon.png') }}" alt=""><span>LiquidERP</span></a>
+      {% for group, items in nav %}
+        <div class="side-group">{{ group }}</div>
+        {% for target, label, icon, eps in items %}
+          <a class="side-link {{ 'on' if ep in eps }}" href="{{ url_for(target) }}" title="{{ label }}"><svg><use href="#{{ icon }}"/></svg><span>{{ label }}</span></a>
+        {% endfor %}
+        {% if group == 'Narzędzia' %}
+          <button type="button" class="side-link" data-report title="Zgłoś błąd albo pomysł"><svg><use href="#i-bubble"/></svg><span>Zgłoś uwagę</span></button>
+        {% endif %}
+      {% endfor %}
+      <div class="side-bottom">
+        <div class="side-version" title="Wersja programu">wersja {{ VERSION }}</div>
+        <button type="button" class="side-link side-toggle" id="sideToggle" title="Zwiń / rozwiń menu"><svg><use href="#i-chev"/></svg><span>Zwiń menu</span></button>
+      </div>
+    </aside>
+    <div class="content">
+      <header class="topbar">
+        <div class="crumbs">{% if ns.group %}{{ ns.group }} › {% endif %}<b>{{ self.title() }}</b>{% if self.back() %}<kbd title="Esc wraca do listy">Esc</kbd>{% endif %}</div>
+        <form class="globalsearch" action="{{ url_for('search_page') }}" autocomplete="off" role="search">
+          <svg><use href="#i-search"/></svg>
+          <input type="search" name="q" id="gq" placeholder="Szukaj wszędzie…  ( / )" value="{{ q if q is defined else '' }}">
+          <div class="gs-results" id="gsResults" hidden></div>
+        </form>
+        <button type="button" class="iconbtn" data-report title="Zgłoś uwagę – błąd albo pomysł"><svg><use href="#i-bubble"/></svg></button>
+        <button type="button" class="iconbtn" id="themeToggle" title="Motyw jasny / ciemny"><svg><use href="#i-moon"/></svg></button>
+      </header>
+      <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for kind, msg in messages %}
+            <div class="flash {{ kind }}">{{ msg }}</div>
+          {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <dialog class="modal" id="reportDialog">
+    <form method="dialog" id="reportForm" autocomplete="off">
+      <h2>Zgłoś uwagę</h2>
+      <p class="muted hint" style="margin:0 0 .8rem">Otworzy się przeglądarka z gotowym zgłoszeniem na GitHubie
+        (potrzebne darmowe konto). Dopisujemy tylko wersję programu i systemu – żadne dane z Twojego magazynu nie są wysyłane.</p>
+      <div class="segmented" role="radiogroup">
+        <label><input type="radio" name="kind" value="bug" checked> Błąd</label>
+        <label><input type="radio" name="kind" value="idea"> Pomysł</label>
+      </div>
+      <label>Tytuł <small class="muted">(opcjonalnie)</small><input name="title" maxlength="120" placeholder="krótko, czego dotyczy"></label>
+      <label>Opis<textarea name="description" rows="6" required placeholder="Co się stało albo co warto dodać? Na którym ekranie?"></textarea></label>
+      <div class="report-status muted" id="reportStatus"></div>
+      <div class="formfoot">
+        <button type="button" class="btn" id="reportCancel">Anuluj</button>
+        <button type="submit" class="btn primary" id="reportSend" value="send">Otwórz zgłoszenie w przeglądarce</button>
+      </div>
+    </form>
+  </dialog>
+  <script>
+  (function () {
+    const root = document.documentElement, shell = document.getElementById('shell');
+    const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+    if (root.classList.contains('side-collapsed')) shell.classList.add('collapsed');
+    document.getElementById('sideToggle').addEventListener('click', () => {
+      store('sidebar', shell.classList.toggle('collapsed') ? 'collapsed' : null);
+    });
+    const saveSetting = (key, value) => {
+      const body = new FormData(); body.append('key', key); body.append('value', value);
+      fetch('{{ url_for("api_setting") }}', {method: 'POST', body}).catch(() => {});
+    };
+    // Mieszanie objętościowo (ml) albo wagowo (g): wyróżnia odpowiednią kolumnę w wyliczeniach.
+    document.addEventListener('click', e => {
+      const b = e.target.closest('.measure-toggle button');
+      if (!b) return;
+      root.dataset.measure = b.dataset.measure;
+      saveSetting('measure', b.dataset.measure === 'g' ? 'g' : 'ml');
+    });
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const light = root.dataset.theme !== 'light';
+      light ? root.dataset.theme = 'light' : delete root.dataset.theme;
+      saveSetting('theme', light ? 'light' : 'dark');
+    });
+
+    // Zgłoś uwagę: serwer składa adres zgłoszenia GitHub i otwiera go w domyślnej przeglądarce.
+    const dlg = document.getElementById('reportDialog'), rform = document.getElementById('reportForm');
+    const rstatus = document.getElementById('reportStatus');
+    document.querySelectorAll('[data-report]').forEach(b => b.addEventListener('click', () => {
+      rstatus.textContent = ''; dlg.showModal(); rform.description.focus();
+    }));
+    document.getElementById('reportCancel').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('keydown', e => { if (e.key === 'Escape') e.stopPropagation(); });
+    rform.addEventListener('submit', async e => {
+      e.preventDefault();
+      const res = await fetch('{{ url_for("api_report") }}', {method: 'POST', body: new FormData(rform)});
+      const d = await res.json();
+      if (d.error) { rstatus.textContent = d.error; rstatus.className = 'report-status neg'; return; }
+      if (d.opened) {
+        rform.reset(); dlg.close();
+      } else {
+        rstatus.className = 'report-status';
+        rstatus.innerHTML = 'Nie udało się otworzyć przeglądarki. Skopiuj adres: <input readonly value="">';
+        rstatus.querySelector('input').value = d.url;
+        rstatus.querySelector('input').select();
+      }
+    });
+  })();
+  </script>
+  <script>
+  (function () {
+    const input = document.getElementById('gq'), box = document.getElementById('gsResults');
+    const LABELS = {ingredients: 'Składniki', recipes: 'Przepisy', productions: 'Produkcja', purchases: 'Przyjęcia'};
+    const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+    let timer, active = -1;
+
+    // „/” lub Ctrl+K przenosi do wyszukiwarki z dowolnego miejsca.
+    document.addEventListener('keydown', e => {
+      const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+      if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault(); input.focus(); input.select();
+      }
+    });
+
+    const links = () => [...box.querySelectorAll('a')];
+    function highlight(i) {
+      const all = links();
+      active = Math.max(-1, Math.min(i, all.length - 1));
+      all.forEach((a, n) => a.classList.toggle('on', n === active));
+      if (active >= 0) all[active].scrollIntoView({block: 'nearest'});
+    }
+
+    async function run() {
+      const q = input.value.trim();
+      if (q.length < 2) { box.hidden = true; return; }
+      const res = await fetch('{{ url_for("api_search") }}?q=' + encodeURIComponent(q));
+      const groups = await res.json();
+      if (input.value.trim() !== q) return;
+      const html = Object.entries(groups).filter(([, items]) => items.length).map(([key, items]) =>
+        `<div class="gs-group">${LABELS[key]}</div>` + items.map(it =>
+          `<a href="${it.url}" class="${it.active ? '' : 'inactive'}"><b>${esc(it.title)}</b>` +
+          `${it.sub ? `<small>${esc(it.sub)}</small>` : ''}${it.snippet ? `<span>${esc(it.snippet)}</span>` : ''}</a>`).join('')).join('');
+      box.innerHTML = (html || '<div class="gs-empty">Nic nie znaleziono.</div>') +
+        `<a href="{{ url_for('search_page') }}?q=${encodeURIComponent(q)}" class="gs-all">Wszystkie wyniki ↵</a>`;
+      box.hidden = false;
+      active = -1;
+    }
+
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 150); });
+    input.addEventListener('focus', () => { if (box.innerHTML && input.value.trim().length >= 2) box.hidden = false; });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); highlight(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
+      else if (e.key === 'Escape') { e.stopPropagation(); box.hidden = true; input.blur(); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); location.href = links()[active].href; }
+    });
+    document.addEventListener('click', e => { if (!e.target.closest('.globalsearch')) box.hidden = true; });
+  })();
+  </script>
+  <script>
+  (function () {
+    // Formularze z data-dirty-check pytają o wyjście, gdy mają niezapisane zmiany.
+    let dirty = false;
+    document.querySelectorAll('form[data-dirty-check]').forEach(f => {
+      f.addEventListener('input', () => { dirty = true; });
+      f.addEventListener('change', () => { dirty = true; });
+      f.addEventListener('submit', () => { dirty = false; });
+    });
+    window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+    // Esc na karcie obiektu wraca do listy (jak zamknięcie formularza w ERP).
+    const back = document.body.dataset.back;
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || !back || e.defaultPrevented || e.repeat) return;
+      if (document.querySelector('.gs-results:not([hidden])')) return;
+      const el = document.activeElement;
+      if (el && el.tagName === 'SELECT') return;  // Esc zamyka rozwiniętą listę
+      e.preventDefault();
+      location.href = back;
+    });
+  })();
+  </script>
+  <script>
+  (function () {
+    // Sortowanie list: klik w nagłówek kolumny (rosnąco ↔ malejąco), wybór zapamiętany dla każdej listy.
+    // Wartość bierzemy z data-sort komórki albo z pierwszej linii jej tekstu; liczby w formacie „1 017,52 zł” sortują się liczbowo.
+    const NUM = /^[-−]?[\d\s ]+(?:,\d+)?(?=\s|$|[^\d\s,])/;
+    const key = td => {
+      if (!td) return null;
+      const raw = (td.dataset.sort ?? td.innerText.split('\n')[0]).trim();
+      if (!raw || raw === '–' || raw === '-') return null;
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw;  // daty ISO sortują się jako tekst
+      const m = raw.match(NUM);
+      if (m && /\d/.test(m[0])) return parseFloat(m[0].replace(/[\s ]/g, '').replace('−', '-').replace(',', '.'));
+      return raw.toLowerCase();
+    };
+    const compare = (a, b) => {
+      if (a === null && b === null) return 0;
+      if (a === null) return 1;            // puste zawsze na końcu
+      if (b === null) return -1;
+      if (typeof a === 'number' && typeof b === 'number') return a - b;
+      return String(a).localeCompare(String(b), 'pl', {numeric: true});
+    };
+    document.querySelectorAll('table.grid:not(.lines):not(.calc)').forEach((table, ti) => {
+      const head = table.tHead && table.tHead.rows[0];
+      const body = table.tBodies[0];
+      if (!head || !body) return;
+      const store = 'sort:' + location.pathname + ':' + ti;
+      const ths = [...head.cells];
+      function apply(col, dir, save) {
+        const rows = [...body.rows].filter(r => !r.querySelector('td.empty'));
+        if (rows.length < 2) return;
+        const keyed = rows.map((r, i) => [r, key(r.cells[col]), i]);
+        keyed.sort((x, y) => {
+          const c = compare(x[1], y[1]);
+          if (x[1] === null || y[1] === null) return c || x[2] - y[2];
+          return (dir === 'asc' ? c : -c) || x[2] - y[2];
+        });
+        keyed.forEach(([r]) => body.appendChild(r));
+        ths.forEach((th, i) => th.setAttribute('aria-sort', i === col ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'));
+        if (save) try { localStorage.setItem(store, col + ':' + dir); } catch (e) {}
+      }
+      ths.forEach((th, col) => {
+        if (!th.textContent.trim() || th.hasAttribute('data-nosort')) return;
+        th.classList.add('sortable');
+        th.title = 'Sortuj (klik: rosnąco / malejąco)';
+        th.addEventListener('click', () => {
+          const cur = th.getAttribute('aria-sort');
+          // liczby i daty zwykle chcemy najpierw malejąco, tekst rosnąco
+          const sample = [...body.rows].map(r => key(r.cells[col])).find(v => v !== null);
+          const first = typeof sample === 'number' || /^\d{4}-\d{2}/.test(sample || '') ? 'desc' : 'asc';
+          apply(col, cur === 'none' || !cur ? first : (cur === 'ascending' ? 'desc' : 'asc'), true);
+        });
+      });
+      try {
+        const saved = localStorage.getItem(store);
+        if (saved) { const [c, d] = saved.split(':'); if (ths[+c]) apply(+c, d, false); }
+      } catch (e) {}
+    });
+  })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
