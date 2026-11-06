@@ -15,8 +15,12 @@ komputerze – bez konta, bez chmury, bez reklam. Darmowy, na licencji MIT.
 - **Produkcja** – „Zrób liquid” z walidacją stanów, butelkami, kosztem partii i możliwością cofnięcia.
 - **Lista zakupów** – braki jednym kliknięciem, pojemność i liczba sztuk, kopiowanie jako tekst,
   automatyczne odhaczanie przy przyjęciu.
+- **Kalkulator mieszania** – łączysz gotowe płyny (liquid, shortfill, bazę, shot, PG/VG) i widzisz objętość, moc
+  nikotyny i proporcję; dobiera też ilość bazy do docelowej mocy (np. ile ml bazy 18 mg do 50 ml shortfilla na 3 mg).
 - **Import z EJuiceCalculatora** – składniki, stany, ceny, przepisy i historia z pliku XML.
 - Wyszukiwarka (klawisz `/` lub `Ctrl+K`), sortowanie list, `Esc` wraca do listy, ciemny i jasny motyw.
+- **Ustawienia** (na dole menu): domyślne parametry przepisu, waluta, motyw, ml/g, liczba kopii, PDF na telefon;
+  w zakładkach także kopie zapasowe, import danych i informacje o programie.
 - **Kopie zapasowe** – automatycznie raz dziennie, ręcznie i przywracanie jednym kliknięciem.
 - **PDF na telefon** (opcjonalnie) – lista zakupów i stany w pliku, który program zapisuje do wybranego folderu
   (np. OneDrive albo Dysk Google), żeby mieć go w sklepie pod ręką.
@@ -34,7 +38,7 @@ zwykle instaluje się z aktualizacjami ([pobierz WebView2](https://developer.mic
 
 ### Gdzie są moje dane?
 
-W folderze `%AppData%\LiquidERP` (wpisz to w pasku adresu Eksploratora): baza `liquiderp.db`,
+W folderze `%AppData%\LiquidERP` (pełne ścieżki: Ustawienia › Informacje) (wpisz to w pasku adresu Eksploratora): baza `liquiderp.db`,
 kopie zapasowe w `kopie\`, dziennik błędów `liquiderp.log`. Odinstalowanie programu **nie usuwa** danych.
 Aktualizacja = zainstalowanie nowej wersji na starą – dane zostają.
 

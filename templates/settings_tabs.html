@@ -1,0 +1,11 @@
+{# Pasek zakładek strony Ustawienia – dołączany na górze każdej zakładki. #}
+{% set tabs = [('settings_page', 'Ogólne', 'i-gear'), ('backups', 'Kopie zapasowe', 'i-archive'),
+               ('import_page', 'Import danych', 'i-up'), ('settings_info', 'Informacje', 'i-list')] %}
+<div class="pagehead">
+  <h1>Ustawienia</h1>
+  <nav class="tabs">
+    {% for target, label, icon in tabs %}
+      <a href="{{ url_for(target) }}" class="{{ 'on' if request.endpoint == target }}"><svg><use href="#{{ icon }}"/></svg>{{ label }}</a>
+    {% endfor %}
+  </nav>
+</div>

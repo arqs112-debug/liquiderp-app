@@ -49,16 +49,15 @@
     ('Receptury', [('recipes', 'Przepisy', 'i-flask', ('recipes', 'recipe_edit'))]),
     ('Produkcja', [('production_new', 'Zrób liquid', 'i-make', ('production_new',)),
                    ('productions', 'Historia produkcji', 'i-clock', ('productions', 'production_view'))]),
-    ('Narzędzia', [('import_page', 'Import danych', 'i-up', ('import_page',)),
-                   ('backups', 'Kopie zapasowe', 'i-archive', ('backups',)),
-                   ('settings_page', 'Ustawienia', 'i-gear', ('settings_page',))]),
+    ('Narzędzia', [('mixer', 'Kalkulator mieszania', 'i-flask', ('mixer',))]),
+    ('Ustawienia', [('settings_page', 'Ustawienia', 'i-gear', ('settings_page', 'import_page', 'backups', 'settings_info'))]),
   ] %}
   {% set ns = namespace(group='', page='') %}
   {% for group, items in nav %}{% for target, label, icon, eps in items %}{% if ep in eps %}{% set ns.group = group %}{% set ns.page = label %}{% endif %}{% endfor %}{% endfor %}
   <div class="shell" id="shell">
     <aside class="sidebar">
       <a class="side-brand" href="{{ url_for('dashboard') }}"><img src="{{ url_for('static', filename='favicon.png') }}" alt=""><span>LiquidERP</span></a>
-      {% for group, items in nav %}
+      {% for group, items in nav if group != 'Ustawienia' %}
         <div class="side-group">{{ group }}</div>
         {% for target, label, icon, eps in items %}
           <a class="side-link {{ 'on' if ep in eps }}" href="{{ url_for(target) }}" title="{{ label }}"><svg><use href="#{{ icon }}"/></svg><span>{{ label }}</span></a>
@@ -69,6 +68,7 @@
       {% endfor %}
       <div class="side-bottom">
         <div class="side-version" title="Wersja programu">wersja {{ VERSION }}</div>
+        <a class="side-link {{ 'on' if ep in ('settings_page', 'import_page', 'backups', 'settings_info') }}" href="{{ url_for('settings_page') }}" title="Ustawienia"><svg><use href="#i-gear"/></svg><span>Ustawienia</span></a>
         <button type="button" class="side-link side-toggle" id="sideToggle" title="Zwiń / rozwiń menu"><svg><use href="#i-chev"/></svg><span>Zwiń menu</span></button>
       </div>
     </aside>

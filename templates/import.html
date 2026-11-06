@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Import{% endblock %}
+{% block title %}Import danych{% endblock %}
 {% block content %}
-<div class="pagehead"><h1>Import z EJuiceCalculatora</h1></div>
+{% include "settings_tabs.html" %}
 <form method="post" class="card" enctype="multipart/form-data">
+  <h2>Import z EJuiceCalculatora</h2>
   <p class="muted">Wczytuje składniki (z opisami, cenami, stanami i progami), przepisy oraz historię ich robienia
     z pliku XML EJuiceCalculatora (zwykle <code>Baza.xml</code> w jego folderze). Oryginalny plik nie jest zmieniany.</p>
   <div class="fields">
@@ -13,6 +14,6 @@
         zastąp istniejące dane (usuwa wszystko, co jest teraz w LiquidERP; wcześniej zrobi się kopia zapasowa)</label>
     {% endif %}
   </div>
-  <div class="formfoot"><button class="btn primary">Importuj</button></div>
+  <div class="formfoot"><button class="btn primary"><svg><use href="#i-up"/></svg>Importuj</button></div>
 </form>
 {% endblock %}

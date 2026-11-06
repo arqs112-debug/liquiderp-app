@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Informacje{% endblock %}
+{% block content %}
+{% include "settings_tabs.html" %}
+<section class="card">
+  <h2>Program</h2>
+  <table class="grid compact">
+    <tbody>
+      <tr><td style="width:14rem">Wersja</td><td><b>LiquidERP {{ VERSION }}</b> · licencja MIT</td></tr>
+      <tr><td>Strona projektu i nowe wersje</td><td><a href="{{ REPO_URL }}" target="_blank">{{ REPO_URL|replace('https://', '') }}</a></td></tr>
+      <tr><td>Składniki (aktywne / wszystkie)</td><td>{{ info.ingredients_active }} / {{ info.ingredients }}</td></tr>
+      <tr><td>Przepisy (aktywne / w archiwum)</td><td>{{ info.recipes_active }} / {{ info.recipes_archived }}</td></tr>
+      <tr><td>Przyjęcia · produkcje</td><td>{{ info.purchases }} · {{ info.productions }}</td></tr>
+    </tbody>
+  </table>
+  <div class="formfoot left">
+    <button type="button" class="btn" data-report><svg><use href="#i-bubble"/></svg>Zgłoś uwagę</button>
+    <a class="btn" href="{{ url_for('setup_wizard', ponownie=1) }}">Uruchom kreator ponownie</a>
+  </div>
+</section>
+<section class="card">
+  <h2>Gdzie są dane</h2>
+  <table class="grid compact">
+    <tbody>
+      {% for label, path, size in info.paths %}
+        <tr><td style="width:14rem">{{ label }}</td><td>{% if path %}<code>{{ path }}</code>{% if size %} <small>{{ size }}</small>{% endif %}{% else %}<span class="muted">wyłączony</span>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted hint" style="margin:.6rem 0 0">Cała baza to jeden plik – jego kopia jest pełną kopią zapasową danych.
+    Odinstalowanie programu nie usuwa tego folderu.</p>
+</section>
+{% endblock %}

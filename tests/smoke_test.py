@@ -329,6 +329,24 @@ with db.connect() as conn:
 assert 'id="pg_pct"' in c.get(f"/produkcja/nowa?przepis={rid}").get_data(as_text=True)
 print("PG/VG w produkcji OK")
 
+# --- kalkulator mieszania ---
+page = c.get("/kalkulator-mieszania").get_data(as_text=True)
+assert "Kalkulator mieszania" in page and "Baza 36" in page and "Dobierz" in page
+print("kalkulator mieszania OK")
+
+# --- ustawienia: zakładki Ogólne / Kopie / Import / Informacje, pozycja na dole menu ---
+for url, text in [("/ustawienia", "Nowy przepis – wartości domyślne"), ("/kopie", "Zrób kopię teraz"),
+                  ("/import", "Import z EJuiceCalculatora"), ("/ustawienia/informacje", "Gdzie są dane")]:
+    page = c.get(url).get_data(as_text=True)
+    assert text in page and 'class="tabs"' in page and "Ustawienia</span>" in page, url
+    assert '<a href="/ustawienia" class="on">' in page or url != "/ustawienia", url
+info = c.get("/ustawienia/informacje").get_data(as_text=True)
+assert os.environ["LIQUIDERP_DATA"] in info and m.__version__ in info and "data-report" in info
+assert "OneDrive" not in c.get("/kopie").get_data(as_text=True)
+home = c.get("/").get_data(as_text=True)
+assert "Import danych</span>" not in home and "Kalkulator mieszania</span>" in home
+print("zakładki ustawień OK")
+
 # --- brak śladów integracji ze sklepem i pocztą ---
 with db.connect() as conn:
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}

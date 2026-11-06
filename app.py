@@ -825,6 +825,20 @@ def search_results(query, limit=None):
     return groups
 
 
+@app.route("/kalkulator-mieszania")
+def mixer():
+    """Kalkulator łączenia gotowych płynów – bez wpływu na magazyn."""
+    with db.connect() as conn:
+        options = [{"label": ingredient_label(r), "mg": r["nicotine_mg"], "pg": r["pg_pct"]} for r in conn.execute(
+            "SELECT * FROM ingredients WHERE active = 1 AND category IN ('nicotine', 'pg', 'vg', 'other')"
+            " ORDER BY category, lower(name)")]
+        options += [{"label": f"Produkcja: {p['recipe_name']} ({p['date']}, {p['nicotine_mg']:g} mg, "
+                              f"{p['pg_pct']:.0f}/{p['vg_pct']:.0f})",
+                     "mg": round(p["nicotine_mg"], 2), "pg": round(p["pg_pct"], 1)}
+                    for p in conn.execute("SELECT * FROM productions ORDER BY date DESC, id DESC LIMIT 30")]
+    return render_template("mixer.html", options=options)
+
+
 @app.route("/szukaj")
 def search_page():
     q = request.args.get("q", "").strip()
@@ -1018,6 +1032,39 @@ def settings_page():
         cfg = settings.all_settings(conn)
     return render_template("settings.html", cfg=cfg, options=options, data_dir=os.path.dirname(db.DB_PATH),
                            suggested_dir=settings.default_phone_dir())
+
+
+@app.route("/ustawienia/informacje")
+def settings_info():
+    import backup
+    import phone_export
+
+    def size(path):
+        try:
+            return f"{os.path.getsize(path) / 1024:,.0f} KB".replace(",", " ")
+        except (OSError, TypeError):
+            return ""
+
+    with db.connect() as conn:
+        count = lambda sql: conn.execute(sql).fetchone()[0]
+        info = {
+            "ingredients": count("SELECT COUNT(*) FROM ingredients"),
+            "ingredients_active": count("SELECT COUNT(*) FROM ingredients WHERE active = 1"),
+            "recipes_active": count("SELECT COUNT(*) FROM recipes WHERE archived = 0"),
+            "recipes_archived": count("SELECT COUNT(*) FROM recipes WHERE archived = 1"),
+            "purchases": count("SELECT COUNT(*) FROM purchases"),
+            "productions": count("SELECT COUNT(*) FROM productions"),
+        }
+    data_dir = os.path.dirname(db.DB_PATH)
+    log = os.path.join(data_dir, "liquiderp.log")
+    pdf = phone_export.target_path() if phone_export.enabled() else None
+    info["paths"] = [("Folder danych", data_dir, ""),
+                     ("Baza danych", db.DB_PATH, size(db.DB_PATH)),
+                     ("Kopie zapasowe", backup.backup_dir(), ""),
+                     ("PDF na telefon", pdf, size(pdf)),
+                     ("Dziennik błędów", log, size(log)),
+                     ("Folder programu", paths.RESOURCE_DIR, "")]
+    return render_template("settings_info.html", info=info)
 
 
 @app.post("/api/ustawienia")

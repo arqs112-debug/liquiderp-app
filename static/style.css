@@ -379,3 +379,12 @@ button.side-link { width: calc(100% - .8rem); background: none; border-top: 0; b
 .choice span { display: flex; flex-direction: column; gap: .2rem; }
 .wizard-bases { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .6rem 1rem; align-items: center; }
 .wizard-foot { align-items: center; border-top: 1px solid var(--line); padding-top: .9rem; }
+
+/* Zakładki strony Ustawienia. */
+.tabs { display: flex; flex-wrap: wrap; gap: .2rem; border-bottom: 1px solid var(--line); }
+.tabs a { display: inline-flex; align-items: center; gap: .45rem; padding: .5rem .9rem; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a svg { width: 16px; height: 16px; }
+.tabs a:hover { color: var(--text); text-decoration: none; }
+.tabs a.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.tabs a.on svg { color: var(--accent); }

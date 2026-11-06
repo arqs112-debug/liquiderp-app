@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Kopie zapasowe{% endblock %}
 {% block content %}
+{% include "settings_tabs.html" %}
 <div class="pagehead">
-  <h1>Kopie zapasowe</h1>
   <form method="post" action="{{ url_for('backup_create') }}" class="actions"><button class="btn primary"><svg><use href="#i-archive"/></svg>Zrób kopię teraz</button></form>
 </div>
 <p class="muted">Kopia robi się sama przy pierwszym uruchomieniu programu każdego dnia. Trzymam {{ keep }} najnowszych

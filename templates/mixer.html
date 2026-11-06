@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Kalkulator mieszania{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>Kalkulator mieszania</h1>
+  <div class="actions">
+    <button type="button" class="btn" id="addRow"><svg><use href="#i-plus"/></svg>Dodaj płyn</button>
+    <button type="button" class="btn" id="reset">Wyczyść</button>
+  </div>
+</div>
+<p class="muted" style="margin-top:0">Łączysz gotowe płyny (liquid, shortfill, bazę, shot, PG/VG) i widzisz, co wyjdzie: objętość, moc nikotyny i proporcję.
+  Nic nie zmienia się w magazynie. Wpisz nazwę z podpowiedzi, a moc i PG/VG uzupełnią się same.</p>
+
+<div class="cols recipe">
+  <div class="side">
+    <div class="card">
+      <h2>Płyny do zmieszania</h2>
+      <table class="grid lines" id="mixTable">
+        <thead><tr><th>Płyn</th><th style="width:7rem">Objętość</th><th style="width:7rem">Nikotyna</th><th style="width:6rem">PG %</th><th style="width:6rem">VG %</th>
+          <th style="width:3rem" title="Ten płyn dobierz do docelowej mocy">Dobierz</th><th style="width:2rem"></th></tr></thead>
+        <tbody id="mixRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Dobierz ilość do docelowej mocy</h2>
+      <div class="fields three">
+        <label>Docelowa nikotyna (mg/ml) <input id="target" inputmode="decimal" placeholder="np. 3"></label>
+        <label class="span2">Dobierany płyn
+          <input id="targetRowName" disabled placeholder="zaznacz „Dobierz” przy płynie"></label>
+      </div>
+      <div id="solveMsg" class="note info" style="margin:.8rem 0 0">Zaznacz przy jednym płynie „Dobierz”, a policzę, ile go dodać, żeby uzyskać zadaną moc.
+        Przykład: 50 ml shortfilla 0 mg + baza 18 mg → ile ml bazy na 3 mg?</div>
+    </div>
+  </div>
+
+  <div class="side sticky">
+    <div class="card">
+      <h2>Wynik</h2>
+      <div class="summary" id="result"></div>
+      <table class="grid compact calc" style="margin-top:.9rem">
+        <thead><tr><th>Płyn</th><th class="r">ml</th><th class="r">Udział</th><th class="r">Nikotyna</th></tr></thead>
+        <tbody id="shareRows"></tbody>
+      </table>
+      <div id="warn"></div>
+    </div>
+  </div>
+</div>
+
+<template id="mixTpl">
+  <tr>
+    <td><input class="m-name" list="mixOptions" placeholder="np. shortfill, baza 18 mg…"></td>
+    <td><div class="unitbox"><input class="m-ml" inputmode="decimal"><span class="unit">ml</span></div></td>
+    <td><div class="unitbox"><input class="m-mg" inputmode="decimal" value="0"><span class="unit">mg</span></div></td>
+    <td><input class="m-pg r" inputmode="decimal" value="50"></td>
+    <td><input class="m-vg r" inputmode="decimal" value="50"></td>
+    <td style="text-align:center"><input type="radio" name="solve" class="m-solve" title="Dobierz ilość tego płynu"></td>
+    <td><button type="button" class="link danger remove" title="Usuń">✕</button></td>
+  </tr>
+</template>
+<datalist id="mixOptions">{% for o in options %}<option value="{{ o.label }}">{% endfor %}</datalist>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const OPTIONS = {{ options|tojson }};
+  const byLabel = new Map(OPTIONS.map(o => [o.label.toLowerCase(), o]));
+  const tbody = document.getElementById('mixRows'), tpl = document.getElementById('mixTpl');
+  const target = document.getElementById('target');
+  const num = s => { const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(v) ? 0 : v; };
+  const fmt = (v, d = 2) => v.toLocaleString('pl-PL', {maximumFractionDigits: d});
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const STORE = 'mixer';
+
+  function addRow(data) {
+    const tr = tpl.content.firstElementChild.cloneNode(true);
+    const q = c => tr.querySelector(c);
+    if (data) {
+      q('.m-name').value = data.name || ''; q('.m-ml').value = data.ml || ''; q('.m-mg').value = data.mg ?? 0;
+      q('.m-pg').value = data.pg ?? 50; q('.m-vg').value = fmt(100 - num(data.pg ?? 50)); q('.m-solve').checked = !!data.solve;
+    }
+    q('.m-name').addEventListener('change', () => {
+      const o = byLabel.get(q('.m-name').value.trim().toLowerCase());
+      if (o) { q('.m-mg').value = fmt(o.mg); q('.m-pg').value = fmt(o.pg); q('.m-vg').value = fmt(100 - o.pg); }
+      update();
+    });
+    q('.m-pg').addEventListener('input', () => { q('.m-vg').value = fmt(100 - num(q('.m-pg').value)); });
+    q('.m-vg').addEventListener('input', () => { q('.m-pg').value = fmt(100 - num(q('.m-vg').value)); });
+    q('.remove').addEventListener('click', () => { tr.remove(); if (tbody.children.length < 2) addRow(); update(); });
+    tbody.appendChild(tr);
+    return tr;
+  }
+
+  const rowsData = () => [...tbody.children].map(tr => ({
+    tr, name: tr.querySelector('.m-name').value.trim(), ml: num(tr.querySelector('.m-ml').value),
+    mg: num(tr.querySelector('.m-mg').value), pg: Math.min(100, Math.max(0, num(tr.querySelector('.m-pg').value))),
+    solve: tr.querySelector('.m-solve').checked,
+  }));
+
+  function update() {
+    const rows = rowsData();
+    const solveRow = rows.find(r => r.solve);
+    const msg = document.getElementById('solveMsg');
+    document.getElementById('targetRowName').value = solveRow ? (solveRow.name || 'płyn ' + (rows.indexOf(solveRow) + 1)) : '';
+
+    // Dobieranie: V = Σ(V_i·(C_i − T)) / (T − C_x) dla pozostałych płynów.
+    if (solveRow && target.value.trim() !== '') {
+      const T = num(target.value), others = rows.filter(r => r !== solveRow);
+      const nicOthers = others.reduce((a, r) => a + r.ml * (r.mg - T), 0);
+      const denom = T - solveRow.mg;
+      let text, kind = 'info';
+      if (!others.some(r => r.ml > 0)) { text = 'Wpisz objętość pozostałych płynów.'; kind = 'warn'; }
+      else if (Math.abs(denom) < 1e-9) { text = 'Dobierany płyn ma dokładnie docelową moc – każda ilość da ten sam wynik tylko wtedy, gdy reszta też ją ma.'; kind = 'warn'; }
+      else {
+        const v = nicOthers / denom;
+        if (v < 0) { text = `Z tym płynem nie da się uzyskać ${fmt(T)} mg/ml – jego moc jest po tej samej stronie co reszta. Wybierz płyn mocniejszy albo słabszy od docelowej mocy.`; kind = 'error'; }
+        else {
+          solveRow.tr.querySelector('.m-ml').value = fmt(v);
+          solveRow.ml = v;
+          text = `Dodaj <b>${fmt(v)} ml</b> „${esc(solveRow.name || 'dobieranego płynu')}”, żeby uzyskać ${fmt(T)} mg/ml.`;
+        }
+      }
+      msg.className = 'note ' + kind; msg.innerHTML = text;
+    } else if (solveRow) {
+      msg.className = 'note info'; msg.textContent = 'Wpisz docelową moc nikotyny.';
+    }
+
+    const total = rows.reduce((a, r) => a + r.ml, 0);
+    const res = document.getElementById('result'), shares = document.getElementById('shareRows');
+    if (total <= 0) { res.innerHTML = '<div class="muted">Wpisz objętości płynów.</div>'; shares.innerHTML = ''; save(rows); return; }
+    const nic = rows.reduce((a, r) => a + r.ml * r.mg, 0) / total;
+    const pgPct = rows.reduce((a, r) => a + r.ml * r.pg, 0) / total;
+    res.innerHTML = `
+      <div><span class="muted">Objętość</span><strong>${fmt(total)} ml</strong></div>
+      <div><span class="muted">Nikotyna</span><strong>${fmt(nic)} mg/ml</strong><small>${fmt(nic * total, 1)} mg łącznie</small></div>
+      <div><span class="muted">PG/VG</span><strong>${fmt(pgPct, 1)}/${fmt(100 - pgPct, 1)}</strong></div>`;
+    shares.innerHTML = rows.filter(r => r.ml > 0).map((r, i) => `
+      <tr><td>${esc(r.name || 'Płyn ' + (i + 1))}</td><td class="r">${fmt(r.ml)}</td>
+        <td class="r">${fmt(r.ml / total * 100, 1)}%</td><td class="r">${fmt(r.mg)} mg</td></tr>`).join('');
+    save(rows);
+  }
+
+  function save(rows) {
+    try { localStorage.setItem(STORE, JSON.stringify({target: target.value, rows: rows.map(({tr, ...r}) => r)})); } catch (e) {}
+  }
+
+  document.getElementById('addRow').addEventListener('click', () => { addRow(); update(); });
+  document.getElementById('reset').addEventListener('click', () => {
+    tbody.innerHTML = ''; target.value = ''; addRow(); addRow(); update();
+  });
+  tbody.addEventListener('input', update);
+  tbody.addEventListener('change', update);
+  target.addEventListener('input', update);
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+  if (saved && saved.rows && saved.rows.length) { saved.rows.forEach(addRow); target.value = saved.target || ''; }
+  else { addRow({name: '', ml: 50, mg: 0, pg: 30}); addRow({name: '', ml: '', mg: 18, pg: 50, solve: true}); target.value = '3'; }
+  if (tbody.children.length < 2) addRow();
+  update();
+})();
+</script>
+{% endblock %}

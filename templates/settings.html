@@ -1,10 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Ustawienia{% endblock %}
+{% block title %}Ogólne{% endblock %}
 {% block content %}
-<div class="pagehead">
-  <h1>Ustawienia</h1>
-  <div class="actions"><button class="btn primary" form="settingsForm"><svg><use href="#i-save"/></svg>Zapisz ustawienia</button></div>
-</div>
+{% include "settings_tabs.html" %}
 
 <form method="post" id="settingsForm" autocomplete="off" data-dirty-check>
 <div class="cols">
@@ -71,20 +68,13 @@
       <h2>Kopie zapasowe</h2>
       <div class="fields">
         <label>Liczba przechowywanych kopii <input name="backup_keep" value="{{ cfg.backup_keep }}" inputmode="numeric"></label>
-        <label>&nbsp;<a class="btn" href="{{ url_for('backups') }}"><svg><use href="#i-archive"/></svg>Kopie zapasowe</a></label>
+        <label>&nbsp;<a class="btn" href="{{ url_for('backups') }}"><svg><use href="#i-archive"/></svg>Lista kopii</a></label>
       </div>
     </section>
 
-    <section class="card">
-      <h2>O programie</h2>
-      <p style="margin:0 0 .4rem"><b>LiquidERP {{ VERSION }}</b> – domowy magazyn, receptury i produkcja liquidów. Licencja MIT.</p>
-      <p class="muted" style="margin:0 0 .4rem">Dane: <code>{{ data_dir }}</code></p>
-      <p class="muted" style="margin:0">Strona projektu i nowe wersje: <a href="{{ REPO_URL }}" target="_blank">{{ REPO_URL|replace('https://', '') }}</a>.
-        Uwagi zgłosisz przyciskiem „Zgłoś uwagę” w menu.</p>
-      <div class="formfoot left"><a class="btn" href="{{ url_for('setup_wizard', ponownie=1) }}">Uruchom kreator ponownie</a></div>
-    </section>
   </div>
 </div>
+<div class="formfoot"><button class="btn primary"><svg><use href="#i-save"/></svg>Zapisz ustawienia</button></div>
 </form>
 {% endblock %}
 
