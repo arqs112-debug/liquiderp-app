@@ -1,3 +1,4 @@
 flask==3.0.3
 pywebview==5.3.2
 fpdf2==2.7.9
+certifi==2026.10.23

@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import ssl
 import subprocess
 import tempfile
 import threading
@@ -32,10 +33,22 @@ def parse_version(text):
     return tuple(int(x or 0) for x in m.groups()) if m else None
 
 
+def _ssl_context():
+    """Certyfikaty z dołączonego certifi i z magazynu Windows (Windows dociąga główne certyfikaty
+    dopiero na żądanie, więc na części komputerów sam magazyn nie wystarcza)."""
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        ctx = ssl.create_default_context()
+    ctx.load_default_certs()
+    return ctx
+
+
 def _open(url):
     req = urllib.request.Request(url, headers={"User-Agent": f"LiquidERP/{__version__}",
                                                "Accept": "application/vnd.github+json"})
-    return urllib.request.urlopen(req, timeout=TIMEOUT)
+    return urllib.request.urlopen(req, timeout=TIMEOUT, context=_ssl_context())
 
 
 def _installer_asset(release):
