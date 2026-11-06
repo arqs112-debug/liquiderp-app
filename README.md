@@ -42,7 +42,8 @@ zwykle instaluje się z aktualizacjami ([pobierz WebView2](https://developer.mic
 
 W folderze `%AppData%\LiquidERP` (pełne ścieżki: Ustawienia › Informacje) (wpisz to w pasku adresu Eksploratora): baza `liquiderp.db`,
 kopie zapasowe w `kopie\`, dziennik błędów `liquiderp.log`. Odinstalowanie programu **nie usuwa** danych.
-Aktualizacja = zainstalowanie nowej wersji na starą – dane zostają.
+Aktualizacja: Ustawienia › Informacje › **Sprawdź aktualizacje** – program sprawdzi GitHub, pobierze nowy instalator
+i uruchomi go (albo zainstaluj ręcznie nową wersję na starą). Dane zostają.
 
 ## Zgłaszanie uwag
 
@@ -63,6 +64,7 @@ py -3.10 -m venv .venv
 .venv\Scripts\python tests\smoke_test.py   :: testy
 .venv\Scripts\python tests\mail_test.py
 .venv\Scripts\python tests\i18n_test.py   :: wersja angielska
+.venv\Scripts\python tests\update_test.py :: aktualizacje (bez sieci)
 build.bat                                  :: dist\LiquidERP + instalator (wymaga Inno Setup 6)
 ```
 

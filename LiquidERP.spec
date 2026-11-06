@@ -13,7 +13,7 @@ a = Analysis(
            (os.path.join(ROOT, "translations"), "translations")],
     # Moduły ładowane wewnątrz funkcji – na wszelki wypadek wymienione jawnie.
     hiddenimports=["app", "backup", "calc", "import_ejc", "mailparse", "phone_export", "production", "search",
-                   "settings", "paths", "version", "i18n"],
+                   "settings", "paths", "version", "i18n", "updates"],
     excludes=["tkinter"],
     noarchive=False,
 )
