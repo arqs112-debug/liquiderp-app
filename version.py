@@ -1,5 +1,5 @@
 """Numer wersji programu – jedyne miejsce, które trzeba zmienić przy wydaniu (instalator czyta go stąd)."""
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 APP_NAME = "LiquidERP"
 REPO = "arqs112-debug/liquiderp-app"
 REPO_URL = f"https://github.com/{REPO}"
