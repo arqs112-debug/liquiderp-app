@@ -18,6 +18,19 @@
     <a class="btn" href="{{ url_for('setup_wizard', ponownie=1) }}">{{ _('Uruchom kreator ponownie') }}</a>
   </div>
 </section>
+<section class="card" id="updates">
+  <h2>{{ _('Aktualizacje') }}</h2>
+  <p class="muted hint" style="margin:0 0 .7rem">{{ _('Program pyta GitHuba o najnowsze wydanie – nie wysyła żadnych Twoich danych. Aktualizacja zachowuje bazę i kopie zapasowe.') }}</p>
+  <div class="formfoot left" style="margin-top:0">
+    <button type="button" class="btn primary" id="updCheck"><svg><use href="#i-up"/></svg>{{ _('Sprawdź aktualizacje') }}</button>
+    <button type="button" class="btn primary" id="updDownload" hidden><svg><use href="#i-in"/></svg><span></span></button>
+    <button type="button" class="btn primary" id="updInstall" hidden><svg><use href="#i-save"/></svg>{{ _('Zainstaluj i uruchom ponownie') }}</button>
+    <a class="btn" id="updPage" href="{{ REPO_URL }}/releases/latest" target="_blank" hidden>{{ _('Strona wydania') }}</a>
+  </div>
+  <div id="updStatus" class="upd-status"></div>
+  <progress id="updProgress" max="1" value="0" hidden></progress>
+  <details id="updNotesBox" hidden><summary>{{ _('Co nowego') }}</summary><pre id="updNotes"></pre></details>
+</section>
 <section class="card">
   <h2>{{ _('Gdzie są dane') }}</h2>
   <table class="grid compact">
@@ -29,4 +42,54 @@
   </table>
   <p class="muted hint" style="margin:.6rem 0 0">{{ _('Cała baza to jeden plik – jego kopia jest pełną kopią zapasową danych. Odinstalowanie programu nie usuwa tego folderu.') }}</p>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const status = $('updStatus'), bar = $('updProgress'), dl = $('updDownload'), inst = $('updInstall');
+  const post = async url => (await fetch(url, {method: 'POST'})).json();
+  const mb = b => fmtNum(b / 1048576, 1) + ' MB';
+  const say = (text, kind) => { status.textContent = text; status.className = 'upd-status ' + (kind || ''); };
+
+  $('updCheck').addEventListener('click', async () => {
+    say(t('Sprawdzam…')); dl.hidden = inst.hidden = true;
+    const d = await post('{{ url_for("api_update_check") }}');
+    if (d.error) { say(d.error, 'neg'); return; }
+    $('updPage').hidden = false; $('updPage').href = d.page;
+    if (!d.newer) { say(t('Masz najnowszą wersję ({v}).', {v: d.current}), 'ok'); return; }
+    say(t('Dostępna jest nowa wersja {v} (masz {cur}).', {v: d.latest, cur: d.current}), 'new');
+    if (d.notes) { $('updNotes').textContent = d.notes; $('updNotesBox').hidden = false; }
+    if (d.asset) {
+      dl.querySelector('span').textContent = t('Pobierz {name} ({size})', {name: d.asset.name, size: mb(d.asset.size)});
+      dl.hidden = false;
+    } else {
+      say(t('Dostępna jest nowa wersja {v}, ale bez instalatora – pobierz ją ze strony wydania.', {v: d.latest}), 'new');
+    }
+  });
+
+  dl.addEventListener('click', async () => {
+    dl.hidden = true;
+    let d = await post('{{ url_for("api_update_download") }}');
+    if (d.error) { say(d.error, 'neg'); dl.hidden = false; return; }
+    bar.hidden = false;
+    while (d.status === 'downloading') {
+      bar.max = d.total || 1; bar.value = d.done;
+      say(t('Pobieram… {done} z {total}', {done: mb(d.done), total: mb(d.total)}));
+      await new Promise(r => setTimeout(r, 400));
+      d = await (await fetch('{{ url_for("api_update_state") }}')).json();
+    }
+    bar.hidden = true;
+    if (d.status === 'done') { say(t('Pobrano wersję {v}. Program zamknie się, a instalator poprowadzi dalej.', {v: d.version}), 'ok'); inst.hidden = false; }
+    else { say(d.error || t('Pobieranie nie powiodło się.'), 'neg'); dl.hidden = false; }
+  });
+
+  inst.addEventListener('click', async () => {
+    const d = await post('{{ url_for("api_update_install") }}');
+    if (d.error) { say(d.error, 'neg'); return; }
+    inst.disabled = true; say(t('Uruchamiam instalator…'), 'ok');
+  });
+})();
+</script>
 {% endblock %}

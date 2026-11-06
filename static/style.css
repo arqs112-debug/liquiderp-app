@@ -392,3 +392,11 @@ button.side-link { width: calc(100% - .8rem); background: none; border-top: 0; b
 .wizard-lang a { padding: .25rem .6rem; border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); }
 .wizard-lang a.on { border-color: var(--accent); color: var(--text); }
 .wizard-lang a:hover { text-decoration: none; color: var(--text); }
+
+/* Aktualizacje. */
+.upd-status { margin-top: .7rem; min-height: 1.2em; }
+.upd-status.ok { color: var(--ok); }
+.upd-status.new { color: var(--new); font-weight: 600; }
+#updates progress { width: 100%; max-width: 420px; margin-top: .5rem; accent-color: var(--accent); }
+#updates details { margin-top: .7rem; }
+#updates pre { white-space: pre-wrap; font: inherit; font-size: .85rem; color: var(--muted); max-height: 16rem; overflow: auto; margin: .4rem 0 0; }

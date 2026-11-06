@@ -36,7 +36,7 @@ app.jinja_env.globals["_"] = _
 @app.after_request
 def refresh_phone_pdf(response):
     """Każda udana zmiana (POST) odświeża PDF na telefon (jeśli włączony) – z opóźnieniem, w tle."""
-    previews = ("/api/oblicz", "/api/produkcja/", "/api/przyjecie/", "/api/zglos")  # nic nie zmieniają
+    previews = ("/api/oblicz", "/api/produkcja/", "/api/przyjecie/", "/api/zglos", "/api/aktualizacje/")  # nic nie zmieniają
     if request.method == "POST" and response.status_code < 400 and not request.path.startswith(previews):
         import phone_export
         phone_export.schedule()
@@ -1109,6 +1109,32 @@ def phone_pdf_now():
     else:
         flash(_("Nie udało się zapisać PDF – sprawdź folder w ustawieniach (szczegóły w pliku liquiderp.log)."), "error")
     return redirect(url_for("settings_page"))
+
+
+# --- Aktualizacje (GitHub Releases) ---
+
+@app.post("/api/aktualizacje/sprawdz")
+def api_update_check():
+    import updates
+    return updates.check()
+
+
+@app.post("/api/aktualizacje/pobierz")
+def api_update_download():
+    import updates
+    return updates.start_download()
+
+
+@app.get("/api/aktualizacje/stan")
+def api_update_state():
+    import updates
+    return updates.state()
+
+
+@app.post("/api/aktualizacje/zainstaluj")
+def api_update_install():
+    import updates
+    return updates.install()
 
 
 # --- Zgłoś uwagę (GitHub Issues) ---
