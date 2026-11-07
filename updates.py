@@ -2,7 +2,8 @@
 
 Pytamy tylko o ostatnie wydanie publicznego repozytorium (bez żadnych danych użytkownika).
 Instalator pobieramy wyłącznie z adresu wydania tego repozytorium, sprawdzamy rozmiar
-i zapisujemy w folderze tymczasowym; uruchomienie zamyka program, żeby instalator mógł podmienić pliki.
+i zapisujemy w folderze tymczasowym. W zainstalowanym programie instalator działa w tle (bez okien),
+program sam się zamyka, a instalator po podmianie plików uruchamia nową wersję (parametr /restart=1).
 """
 import json
 import logging
@@ -10,6 +11,7 @@ import os
 import re
 import ssl
 import subprocess
+import sys
 import tempfile
 import threading
 import urllib.request
@@ -124,19 +126,43 @@ def _download(asset):
             _state.update(status="error", error=_("Pobieranie nie powiodło się. Spróbuj ponownie albo pobierz instalator ze strony wydania."))
 
 
+def installer_args(path, frozen=None, app_dir=None):
+    """Polecenie instalatora. W zainstalowanym programie: cicho, do tego samego folderu i w tym samym trybie
+    (dla bieżącego użytkownika albo dla wszystkich – wtedy Windows zapyta o uprawnienia), z ponownym uruchomieniem."""
+    frozen = getattr(sys, "frozen", False) if frozen is None else frozen
+    if not frozen:  # wersja źródłowa: zwykły instalator z oknami (nie instalujemy po cichu obok kodu)
+        return [path]
+    app_dir = app_dir or os.path.dirname(sys.executable)
+    log = os.path.join(os.path.dirname(path), "instalacja.log")
+    return [path, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/restart=1", f"/LOG={log}",
+            "/CURRENTUSER" if _writable(app_dir) else "/ALLUSERS"]
+
+
+def _writable(folder):
+    """Czy bieżący użytkownik może pisać w folderze programu (instalacja „dla mnie” vs w Program Files)."""
+    try:
+        fd, test = tempfile.mkstemp(dir=folder)
+        os.close(fd)
+        os.remove(test)
+        return True
+    except OSError:
+        return False
+
+
 def install():
-    """Uruchamia pobrany instalator i zamyka okno programu (instalator podmieni pliki)."""
+    """Uruchamia pobrany instalator (w tle) i zamyka program, żeby instalator mógł podmienić pliki."""
     with _lock:
         path = _state["path"] if _state["status"] == "done" else None
     if not path or not os.path.exists(path):
         return {"error": _("Instalator nie jest jeszcze pobrany.")}
-    _launch(path)
-    threading.Timer(1.5, _close_app).start()
-    return {"ok": True}
+    args = installer_args(path)
+    _launch(args)
+    threading.Timer(2.0, _close_app).start()
+    return {"ok": True, "silent": len(args) > 1}
 
 
-def _launch(path):
-    subprocess.Popen([path], close_fds=True)
+def _launch(args):
+    subprocess.Popen(args, close_fds=True)
 
 
 def _close_app():

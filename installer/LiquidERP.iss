@@ -38,6 +38,8 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile=..\LICENSE
 CloseApplications=yes
+; Program sam uruchamia się po aktualizacji z programu ([Run] z /restart=1), więc bez drugiego uruchomienia.
+RestartApplications=no
 
 [Languages]
 Name: "polish"; MessagesFile: "compiler:Languages\Polish.isl"
@@ -55,10 +57,18 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Aktualizacja z programu (cicha instalacja z /restart=1): uruchom nową wersję jako zwykły użytkownik.
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: RestartRequested
 
 [UninstallDelete]
 ; Tylko pliki tymczasowe programu w folderze instalacji – dane w %AppData%\LiquidERP zostają.
 Type: filesandordirs; Name: "{app}\__pycache__"
+
+[Code]
+function RestartRequested: Boolean;
+begin
+  Result := ExpandConstant('{param:restart|0}') = '1';
+end;
 
 [Messages]
 polish.UninstalledAll=Program %1 został usunięty.%n%nTwoje dane (baza, kopie zapasowe) zostały w folderze AppData\Roaming\LiquidERP – usuń go ręcznie, jeśli nie są już potrzebne.

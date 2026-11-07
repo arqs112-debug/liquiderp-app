@@ -49,8 +49,8 @@ by updates on Windows 10 ([download WebView2](https://developer.microsoft.com/mi
 
 In `%AppData%\LiquidERP` (type it into the Explorer address bar; full paths are shown in Settings → About):
 the database `liquiderp.db`, backups in `kopie\`, the error log `liquiderp.log`. Uninstalling does **not** delete
-your data. To update: Settings › About › **Check for updates** – the program checks GitHub, downloads the new installer and
-runs it (or install the new version over the old one manually). Your data stays.
+your data. To update: Settings › About › **Check for updates** – the program checks GitHub, downloads the update, installs it
+in the background and restarts by itself (or install the new version over the old one manually). Your data stays.
 
 ## Feedback
 

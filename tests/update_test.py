@@ -77,8 +77,7 @@ assert "Najpierw sprawdź" in c.post("/api/aktualizacje/pobierz").get_json()["er
 current_release = release(newer_tag)
 j = c.post("/api/aktualizacje/sprawdz").get_json()
 assert j["newer"] and j["latest"] == newer_tag[1:] and j["asset"]["size"] == len(PAYLOAD) and "nowość A" in j["notes"], j
-assert "Najpierw" not in json.dumps(c.post("/api/aktualizacje/zainstaluj").get_json()) and \
-    "nie jest jeszcze pobrany" in c.post("/api/aktualizacje/zainstaluj").get_json()["error"]
+assert "nie jest jeszcze pobrany" in c.post("/api/aktualizacje/zainstaluj").get_json()["error"]
 s = c.post("/api/aktualizacje/pobierz").get_json()
 for _ in range(50):
     s = c.get("/api/aktualizacje/stan").get_json()
@@ -88,9 +87,16 @@ for _ in range(50):
 assert s["status"] == "done" and s["done"] == len(PAYLOAD) and s["version"] == newer_tag[1:], s
 assert open(s["path"], "rb").read() == PAYLOAD and not os.path.exists(s["path"] + ".part")
 launched = []
-updates._launch = lambda path: launched.append([path])
+updates._launch = lambda args: launched.append(args)
 updates._close_app = lambda: None
-assert c.post("/api/aktualizacje/zainstaluj").get_json() == {"ok": True} and launched == [[s["path"]]]
+assert c.post("/api/aktualizacje/zainstaluj").get_json() == {"ok": True, "silent": False} and launched == [[s["path"]]]
+# w zainstalowanym programie: cicho, z ponownym uruchomieniem, w trybie zgodnym z folderem programu
+mine = tempfile.mkdtemp()
+args = updates.installer_args(s["path"], frozen=True, app_dir=mine)
+assert args[0] == s["path"] and {"/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/restart=1", "/CURRENTUSER"} <= set(args), args
+assert any(a.startswith("/LOG=") for a in args)
+updates._writable = lambda folder: False
+assert "/ALLUSERS" in updates.installer_args(s["path"], frozen=True, app_dir=mine)
 print("pobieranie i instalacja OK")
 
 # zły rozmiar pobranego pliku → błąd, bez instalatora

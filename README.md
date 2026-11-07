@@ -47,8 +47,8 @@ zwykle instaluje się z aktualizacjami ([pobierz WebView2](https://developer.mic
 
 W folderze `%AppData%\LiquidERP` (pełne ścieżki: Ustawienia › Informacje) (wpisz to w pasku adresu Eksploratora): baza `liquiderp.db`,
 kopie zapasowe w `kopie\`, dziennik błędów `liquiderp.log`. Odinstalowanie programu **nie usuwa** danych.
-Aktualizacja: Ustawienia › Informacje › **Sprawdź aktualizacje** – program sprawdzi GitHub, pobierze nowy instalator
-i uruchomi go (albo zainstaluj ręcznie nową wersję na starą). Dane zostają.
+Aktualizacja: Ustawienia › Informacje › **Sprawdź aktualizacje** – program sprawdzi GitHub, pobierze aktualizację,
+zainstaluje ją w tle i sam uruchomi się ponownie (albo zainstaluj ręcznie nową wersję na starą). Dane zostają.
 
 ## Zgłaszanie uwag
 
