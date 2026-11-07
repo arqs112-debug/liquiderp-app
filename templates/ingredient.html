@@ -26,6 +26,11 @@
       <label>{{ _('Grupa') }} <input name="folder" value="{{ ing.folder }}" list="folders" placeholder="{{ _('np. Próbki, Owocowe') }}"></label>
       <label title="{{ _('Używana do kosztu, gdy brak ceny z przyjęć na stanie; każde przyjęcie ustawia ją automatycznie') }}">{{ _('Cena referencyjna (') }}{{ CURRENCY }} / {{ _(CATEGORIES[ing.category].unit) }})
         <input name="ref_price" value="{{ ing.ref_price|num(4) if ing.ref_price }}" inputmode="decimal" placeholder="{{ _('np. 1,00') }}"></label>
+      <label data-for="aroma">{{ _('Otwarty dnia') }}
+        <span class="inline-date"><input type="date" name="opened_at" id="openedAt" value="{{ ing.opened_at or '' }}">
+          <button type="button" class="btn" onclick="document.getElementById('openedAt').valueAsDate = new Date(); document.getElementById('openedAt').dispatchEvent(new Event('change', {bubbles: true}))">{{ _('dziś') }}</button></span>
+        {% if ing.opened_at %}{% set mo = ing.opened_at|months_since %}<small class="{{ 'neg' if mo >= 12 }}">{{ _('otwarty {n} mies. temu', n=mo) }}{% if mo >= 12 %} – {{ _('sprawdź, czy aromat się nie zestarzał') }}{% endif %}</small>{% endif %}
+      </label>
       <label data-for="aroma">{{ _('Domyślny % w przepisie') }} <input name="default_pct" value="{{ ing.default_pct|num if ing.default_pct }}" inputmode="decimal"></label>
       <label data-for="liquid">{{ _('PG %') }} <input name="pg_pct" id="pg_pct" value="{{ ing.pg_pct|num }}" inputmode="decimal"></label>
       <label data-for="liquid">{{ _('VG %') }} <input name="vg_pct" id="vg_pct" value="{{ ing.vg_pct|num }}" inputmode="decimal"></label>
@@ -40,7 +45,10 @@
         <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if ing.active }}> {{ _('aktywny (widoczny w magazynie i listach)') }}</label>
       {% endif %}
     </div>
-    <div class="formfoot"><button class="btn primary">{{ _('Utwórz składnik') if is_new else _('Zapisz zmiany') }}</button></div>
+    <div class="formfoot">
+      {% if last_change %}<button class="btn" form="undoChangeForm" title="{{ _('Przywraca dane karty sprzed ostatniego zapisu') }}">↶ {{ _('Cofnij ostatnią zmianę') }} <small>({{ last_change.changed_at[5:16] }})</small></button>{% endif %}
+      <button class="btn primary" data-ctrl-s>{{ _('Utwórz składnik') if is_new else _('Zapisz zmiany') }}</button>
+    </div>
   </form>
 
   {% if not is_new %}
@@ -90,7 +98,7 @@
       <tr>
         <td>{{ m.date }}</td>
         <td>{{ {'purchase': _('Przyjęcie'), 'production': _('Produkcja'), 'adjustment': _('Korekta')}[m.kind] }}</td>
-        <td>{% if m.kind == 'purchase' %}{{ m.pack_count }} × {{ m.pack_size|num }} {{ unit }} {{ _('po') }} {{ (m.unit_cost * m.pack_size)|money }}{% if m.supplier %} · {{ m.supplier }}{% endif %}
+        <td>{% if m.kind == 'purchase' %}{% if m.pack_size %}{{ m.pack_count }} × {{ m.pack_size|num }} {{ unit }} {{ _('po') }} {{ ((m.unit_cost or 0) * m.pack_size)|money }}{% else %}{{ m.qty|num }} {{ unit }}{% endif %}{% if m.supplier %} · {{ m.supplier }}{% endif %}
             {% if m.purchase_id %} · <a href="{{ url_for('receipt_view', purchase_id=m.purchase_id) }}">{{ _('dokument') }}</a>{% endif %}
             {% elif m.production_id %}<a href="{{ url_for('production_view', production_id=m.production_id) }}">{{ m.note }}</a>
             {% else %}{{ m.note }}{% endif %}</td>
@@ -112,6 +120,8 @@
 </section>
 {% endif %}
 
+{% if last_change %}<form id="undoChangeForm" method="post" action="{{ url_for('ingredient_undo_change', ingredient_id=ing.id) }}"
+      onsubmit="return confirm({{ _('Przywrócić dane karty sprzed ostatniego zapisu?')|tojson|forceescape }})"></form>{% endif %}
 <datalist id="manufacturers">{% for m in manufacturers %}<option value="{{ m }}">{% endfor %}</datalist>
 <datalist id="folders">{% for f in folders %}<option value="{{ f }}">{% endfor %}</datalist>
 <datalist id="suppliers">{% for s in suppliers or [] %}<option value="{{ s }}">{% endfor %}</datalist>

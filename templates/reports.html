@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Raporty') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>{{ _('Raporty') }}</h1>
+  <nav class="tabs">
+    {% for n in (3, 6, 12, 24) %}
+      <a href="{{ url_for('reports', miesiace=n) }}" class="{{ 'on' if r.months == n }}">{{ _('{n} mies.', n=n) }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<div class="tiles">
+  <div class="tile orange"><svg><use href="#i-in"/></svg><span class="t-label">{{ _('Zakupy') }}</span>
+    <span class="t-value">{{ r.total_spend|money }}</span><span class="t-sub">{{ _('ostatnie {n} mies., bez bilansu otwarcia', n=r.months) }}</span></div>
+  <div class="tile blue"><svg><use href="#i-make"/></svg><span class="t-label">{{ _('Zrobione liquidy') }}</span>
+    <span class="t-value">{{ r.total_ml|num(0) }} ml</span><span class="t-sub">{{ _('{n} partii', n=r.monthly|sum(attribute='batches')) }}</span></div>
+  <div class="tile green"><svg><use href="#i-wallet"/></svg><span class="t-label">{{ _('Średni koszt ml') }}</span>
+    <span class="t-value">{{ (r.monthly|sum(attribute='prod_cost') / r.total_ml)|money if r.total_ml else '–' }}</span><span class="t-sub">{{ _('wg produkcji w LiquidERP') }}</span></div>
+</div>
+
+<div class="dash">
+  <section class="card">
+    <h2>{{ _('Wydatki i produkcja w miesiącach') }}</h2>
+    <table class="grid compact bars">
+      <thead><tr><th>{{ _('Miesiąc') }}</th><th>{{ _('Zakupy') }}</th><th>{{ _('Produkcja') }}</th><th class="r">{{ _('Koszt / ml') }}</th></tr></thead>
+      <tbody>
+      {% for m in r.monthly %}
+        <tr>
+          <td class="nowrap">{{ m.label }}</td>
+          <td><div class="bar"><span class="b-spend" style="width:{{ (m.spend / r.max_spend * 100)|round(1) }}%"></span></div><small>{{ m.spend|money if m.spend else '–' }}</small></td>
+          <td><div class="bar"><span class="b-ml" style="width:{{ (m.ml / r.max_ml * 100)|round(1) }}%"></span></div><small>{{ (m.ml|num(0) ~ ' ml') if m.ml else '–' }}</small></td>
+          <td class="r">{{ m.cost_per_ml|money if m.cost_per_ml else '–' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>{{ _('Zakupy według sklepu') }}</h2>
+    <table class="grid compact">
+      <thead><tr><th>{{ _('Sklep') }}</th><th class="r">{{ _('Zamówień') }}</th><th class="r">{{ _('Wartość') }}</th></tr></thead>
+      <tbody>
+      {% for s in r.suppliers %}
+        <tr><td>{{ s.supplier }}</td><td class="r">{{ s.orders }}</td><td class="r" data-sort="{{ s.total }}">{{ s.total|money }}</td></tr>
+      {% else %}
+        <tr><td colspan="3" class="empty">{{ _('Brak zakupów w tym okresie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>{{ _('Najczęściej robione') }}</h2>
+    <table class="grid compact">
+      <thead><tr><th>{{ _('Przepis') }}</th><th class="r">{{ _('Razy') }}</th><th class="r">ml</th><th class="r">{{ _('Śr. ocena partii') }}</th><th>{{ _('Ostatnio') }}</th></tr></thead>
+      <tbody>
+      {% for t in r.top %}
+        <tr><td><a href="{{ url_for('recipe_edit', recipe_id=t.id) }}">{{ t.name }}</a>{% if t.archived %} <span class="tag group">{{ _('archiwum') }}</span>{% endif %}</td>
+          <td class="r">{{ t.made }}</td><td class="r" data-sort="{{ t.ml }}">{{ t.ml|num(0) if t.ml else '–' }}</td>
+          <td class="r stars" data-sort="{{ t.avg_rating or '' }}">{% if t.avg_rating %}{{ t.avg_rating|num(1) }} ★{% else %}<span class="muted">–</span>{% endif %}</td>
+          <td>{{ t.last[:10] }}</td></tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">{{ _('Brak produkcji w tym okresie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>{{ _('Długo leżące aromaty') }}</h2>
+    <table class="grid compact">
+      <thead><tr><th>{{ _('Aromat') }}</th><th class="r">{{ _('Stan') }}</th><th class="r">{{ _('Bez ruchu') }}</th><th>{{ _('Ostatnio użyty') }}</th></tr></thead>
+      <tbody>
+      {% for i in r.idle %}
+        <tr><td><a href="{{ url_for('ingredient_card', ingredient_id=i.id) }}">{{ i.name }}</a> <small>{{ i.manufacturer }}</small>
+            {% if i.opened_at %}<div class="desc">{{ _('otwarty {date}', date=i.opened_at) }}</div>{% endif %}</td>
+          <td class="r" data-sort="{{ i.qty }}">{{ i.qty|num(1) }} ml</td>
+          <td class="r {{ 'neg' if i.days > 365 }}" data-sort="{{ i.days }}">{{ _('{n} dni', n=i.days) }}</td>
+          <td>{{ i.last_used or _('nigdy w LiquidERP') }}</td></tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">{{ _('Brak aromatów na stanie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

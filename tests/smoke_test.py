@@ -349,6 +349,73 @@ home = c.get("/").get_data(as_text=True)
 assert "Import danych</span>" not in home and "Kalkulator mieszania</span>" in home
 print("zakładki ustawień OK")
 
+# --- dojrzewanie i ocena partii ---
+with db.connect() as conn:
+    conn.execute("UPDATE recipes SET steep_days = 5 WHERE id = ?", (rid,))
+r = c.post("/produkcja/nowa", data={"recipe_id": str(rid), "amount_ml": "30", "nicotine_mg": "3", "date": "2026-11-01", "force": "1"})
+pid2 = int(r.headers["Location"].rstrip("/").split("/")[-1])
+with db.connect() as conn:
+    assert conn.execute("SELECT ready_at FROM productions WHERE id = ?", (pid2,)).fetchone()[0] == "2026-11-06"
+assert "Dojrzewanie i ocena partii" in c.get(f"/produkcja/{pid2}").get_data(as_text=True)
+c.post(f"/produkcja/{pid2}/ocena", data={"rating": "", "tasting_note": "", "ready_at": "2099-01-01"})
+assert "dojrzewa jeszcze" in c.get("/").get_data(as_text=True)          # na pulpicie: jeszcze dojrzewa
+c.post(f"/produkcja/{pid2}/ocena", data={"rating": "", "tasting_note": "", "ready_at": "2026-11-06"})
+html = c.get("/").get_data(as_text=True)
+assert "Do spróbowania" in html and "gotowe – oceń" in html
+r = c.post(f"/produkcja/{pid2}/ocena", data={"rating": "4", "tasting_note": "za słodki", "ready_at": "2026-11-06",
+                                              "next": "https://example.com/"})
+assert r.headers["Location"].endswith(f"/produkcja/{pid2}"), r.headers["Location"]   # tylko adresy programu
+with db.connect() as conn:
+    row = conn.execute("SELECT rating, tasting_note, tasted_at FROM productions WHERE id = ?", (pid2,)).fetchone()
+    assert row["rating"] == 4 and row["tasting_note"] == "za słodki" and row["tasted_at"]
+page = c.get(f"/przepis/{rid}").get_data(as_text=True)
+assert "„za słodki”" in page and "zrobiono" in page
+assert "Gotowe od" in c.get("/produkcja").get_data(as_text=True)
+print("ocena partii OK")
+
+# --- co mogę zrobić / plan ---
+import planner
+with db.connect() as conn:
+    cap = {x["id"]: x for x in planner.capacity(conn)}
+    assert cap[rid]["max_ml"] > 0 and cap[rid]["limit"], cap[rid]
+    p = planner.plan(conn, [{"recipe_id": rid, "ml": 100000, "count": 1}])
+    assert p["missing_count"] >= 1 and p["cost"] > 0
+assert "Co mogę zrobić?" in c.get("/co-moge-zrobic").get_data(as_text=True)
+j = c.post("/api/plan", json={"items": [{"recipe_id": rid, "ml": 30, "count": 2}]}).get_json()
+assert j["lines"] and all("missing" in l for l in j["lines"])
+j = c.post("/plan/do-listy", json={"items": [{"recipe_id": rid, "ml": 100000, "count": 1}]}).get_json()
+assert j["added"] + j["already"] >= 1 and j["message"].startswith("Dodano do listy zakupów"), j
+assert "amount.value = fmt(15" in c.get(f"/produkcja/nowa?przepis={rid}&ilosc=15").get_data(as_text=True)
+print("co mogę zrobić OK")
+
+# --- raporty ---
+for n in (3, 12, 24, 7):
+    page = c.get(f"/raporty?miesiace={n}").get_data(as_text=True)
+    assert "Wydatki i produkcja w miesiącach" in page and "Długo leżące aromaty" in page
+assert "Raporty</span>" in c.get("/").get_data(as_text=True)
+print("raporty OK")
+
+# --- cofnij zmianę i data otwarcia ---
+ing_form = {"name": "Truskawka", "category": "aroma", "manufacturer": "Inawera", "pg_pct": "100", "vg_pct": "0", "active": "1"}
+c.post(f"/skladnik/{t['id']}", data={**ing_form, "description": "nowy opis", "opened_at": "2025-01-15"})
+with db.connect() as conn:
+    assert conn.execute("SELECT description, opened_at FROM ingredients WHERE id = ?", (t["id"],)).fetchone()[:] == ("nowy opis", "2025-01-15")
+assert "Cofnij ostatnią zmianę" in c.get(f"/skladnik/{t['id']}").get_data(as_text=True)
+c.post(f"/skladnik/{t['id']}/cofnij-zmiane")
+with db.connect() as conn:
+    assert conn.execute("SELECT description FROM ingredients WHERE id = ?", (t["id"],)).fetchone()[0] != "nowy opis"
+c.post(f"/skladnik/{t['id']}", data={**ing_form, "opened_at": "2024-01-01"})
+assert "otwarty" in c.get("/magazyn").get_data(as_text=True)
+assert "data-ctrl-s" in c.get(f"/przepis/{rid}").get_data(as_text=True)
+# zakup bez pojemności opakowania nie wywraca karty ani dokumentu
+with db.connect() as conn:
+    pur = conn.execute("INSERT INTO purchases (date, supplier) VALUES ('2026-11-02', 'X')").lastrowid
+    conn.execute("INSERT INTO movements (ingredient_id, date, kind, qty, purchase_id) VALUES (?, '2026-11-02', 'purchase', 5, ?)", (t["id"], pur))
+m.app.testing = True
+assert c.get(f"/skladnik/{t['id']}").status_code == 200 and c.get(f"/przyjecie/{pur}").status_code == 200
+m.app.testing = False
+print("cofanie i data otwarcia OK")
+
 # --- brak śladów integracji ze sklepem i pocztą ---
 with db.connect() as conn:
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}

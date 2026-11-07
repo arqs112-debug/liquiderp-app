@@ -14,13 +14,18 @@ komputerze – bez konta, bez chmury, bez reklam. Darmowy, na licencji MIT. Inte
   program rozpoznaje pozycje, pojemności, sztuki i ceny i dopasowuje je do składników (zapamiętuje nazwy ze sklepu).
 - **Przepisy** – wyliczenie na żywo w ml i gramach (także narastająco dla ważenia do jednej butelki), PG/VG
   ze strzałkami ±0,5%, nikotyna, koszt, braki na magazynie; grupy, oceny, archiwum.
-- **Produkcja** – „Zrób liquid” z walidacją stanów, butelkami, kosztem partii i możliwością cofnięcia.
+- **Produkcja** – „Zrób liquid” z walidacją stanów, butelkami, kosztem partii i możliwością cofnięcia;
+  dojrzewanie (gotowe od – wg dni z przepisu) i ocena partii z notatką z testu, lista „Do spróbowania” na pulpicie.
+- **Co mogę zrobić?** – ile każdego przepisu zrobisz z obecnych stanów i plan produkcji z brakami, które jednym
+  kliknięciem trafiają na listę zakupów.
+- **Raporty** – wydatki i produkcja w miesiącach, zakupy według sklepu, najczęściej robione przepisy, długo leżące aromaty.
 - **Lista zakupów** – braki jednym kliknięciem, pojemność i liczba sztuk, kopiowanie jako tekst,
   automatyczne odhaczanie przy przyjęciu.
 - **Kalkulator mieszania** – łączysz gotowe płyny (liquid, shortfill, bazę, shot, PG/VG) i widzisz objętość, moc
   nikotyny i proporcję; dobiera też ilość bazy do docelowej mocy (np. ile ml bazy 18 mg do 50 ml shortfilla na 3 mg).
 - **Import z EJuiceCalculatora** – składniki, stany, ceny, przepisy i historia z pliku XML.
-- Wyszukiwarka (klawisz `/` lub `Ctrl+K`), sortowanie list, `Esc` wraca do listy, ciemny i jasny motyw.
+- Wyszukiwarka (klawisz `/` lub `Ctrl+K`), `Ctrl+S` zapisuje, `Ctrl+F` szuka na liście, sortowanie list, `Esc` wraca do listy,
+  ciemny i jasny motyw; data otwarcia aromatu z ostrzeżeniem po roku, „Cofnij ostatnią zmianę” na karcie składnika.
 - **Ustawienia** (na dole menu): język (polski / English), domyślne parametry przepisu, waluta, motyw, ml/g, liczba kopii, PDF na telefon;
   w zakładkach także kopie zapasowe, import danych i informacje o programie.
 - **Kopie zapasowe** – automatycznie raz dziennie, ręcznie i przywracanie jednym kliknięciem.

@@ -30,7 +30,33 @@ def fmt_money(value):
     return i18n.fmt_money(value, settings.get("currency"))
 
 
+@app.template_filter("months_since")
+def fmt_months_since(iso_date):
+    return opened_months(iso_date) or 0
+
+
+@app.template_filter("days_until")
+def fmt_days_until(iso_date):
+    from datetime import date
+    try:
+        return (date.fromisoformat(iso_date[:10]) - date.today()).days
+    except (TypeError, ValueError):
+        return 0
+
+
 app.jinja_env.globals["_"] = _
+
+OPENED_WARN_MONTHS = 12  # po tylu miesiącach od otwarcia aromat dostaje ostrzeżenie
+
+
+def opened_months(opened_at):
+    from datetime import date
+    try:
+        d = date.fromisoformat(opened_at[:10])
+    except (TypeError, ValueError):
+        return None
+    today = date.today()
+    return (today.year - d.year) * 12 + today.month - d.month - (today.day < d.day)
 
 
 @app.after_request
@@ -89,6 +115,7 @@ def ingredient_rows(conn, include_inactive=False):
             # Bez stanu pokazujemy ostatnią znaną cenę.
             "price": s["avg"] if s["qty"] > 0 and s["avg"] else ing["ref_price"],
             "price_is_ref": not (s["qty"] > 0 and s["avg"]),
+            "opened_months": opened_months(ing["opened_at"]),
             "low": ing["min_stock"] > 0 and s["qty"] < ing["min_stock"],
             "unit": _(db.CATEGORIES[ing["category"]]["unit"]),
         })
@@ -121,11 +148,14 @@ def dashboard():
         recent_receipts = conn.execute(
             "SELECT p.*, SUM(m.qty * m.unit_cost) total, COUNT(m.id) lines FROM purchases p"
             " LEFT JOIN movements m ON m.purchase_id = p.id GROUP BY p.id ORDER BY p.date DESC, p.id DESC LIMIT 5").fetchall()
+        tasting = conn.execute(
+            "SELECT * FROM productions WHERE rating IS NULL AND date >= date('now', '-120 days')"
+            " ORDER BY COALESCE(ready_at, date), id").fetchall()
         recent_made = conn.execute(
             "SELECT h.date, r.id, r.name, h.note FROM recipe_history h JOIN recipes r ON r.id = h.recipe_id"
             " WHERE h.event = 'made' ORDER BY h.date DESC, h.id DESC LIMIT 6").fetchall()
     return render_template("dashboard.html", stats=stats, recent_receipts=recent_receipts,
-                           recent_made=recent_made, month=month)
+                           recent_made=recent_made, month=month, tasting=tasting, today=db.today())
 
 
 @app.route("/magazyn")
@@ -162,6 +192,7 @@ def ingredient_fields_from_form(form):
         "folder": form.get("folder", "").strip(),
         "default_pct": db.parse_num(form.get("default_pct")),
         "ref_price": db.parse_num(form.get("ref_price")),
+        "opened_at": form.get("opened_at") or None,
     }
 
 
@@ -219,6 +250,10 @@ def ingredient_card(ingredient_id):
                 flash(_("Inny składnik ma już tę nazwę, producenta i kategorię."), "error")
             else:
                 fields["active"] = 1 if request.form.get("active") else 0
+                old = {k: ing[k] for k in fields}
+                if old != fields:
+                    conn.execute("INSERT INTO ingredient_changes (ingredient_id, old_values) VALUES (?, ?)",
+                                 (ingredient_id, json.dumps(old, ensure_ascii=False)))
                 assignments = ", ".join(f"{k} = ?" for k in fields)
                 conn.execute(f"UPDATE ingredients SET {assignments} WHERE id = ?",
                              (*fields.values(), ingredient_id))
@@ -228,6 +263,8 @@ def ingredient_card(ingredient_id):
             return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
 
         state = db.stock_state(conn, ingredient_id).get(ingredient_id, {"qty": 0.0, "avg": 0.0})
+        last_change = conn.execute("SELECT * FROM ingredient_changes WHERE ingredient_id = ? ORDER BY id DESC LIMIT 1",
+                                   (ingredient_id,)).fetchone()
         history = conn.execute(
             "SELECT m.*, p.supplier FROM movements m LEFT JOIN purchases p ON p.id = m.purchase_id"
             " WHERE m.ingredient_id = ? ORDER BY m.date DESC, m.id DESC",
@@ -236,10 +273,27 @@ def ingredient_card(ingredient_id):
         suppliers = [r[0] for r in conn.execute(
             "SELECT DISTINCT supplier FROM purchases WHERE supplier <> '' ORDER BY lower(supplier)")]
         return render_template(
-            "ingredient.html", ing=ing, is_new=False, state=state, history=history,
+            "ingredient.html", ing=ing, is_new=False, state=state, history=history, last_change=last_change,
             unit=_(db.CATEGORIES[ing["category"]]["unit"]), today=db.today(), suppliers=suppliers,
             manufacturers=manufacturers(conn), folders=folders(conn), defaults_json=json.dumps(db.CATEGORIES),
         )
+
+
+@app.post("/skladnik/<int:ingredient_id>/cofnij-zmiane")
+def ingredient_undo_change(ingredient_id):
+    """Przywraca dane karty sprzed ostatniego zapisu (nie dotyczy stanów – te cofa się w historii ruchów)."""
+    with db.connect() as conn:
+        change = conn.execute("SELECT * FROM ingredient_changes WHERE ingredient_id = ? ORDER BY id DESC LIMIT 1",
+                              (ingredient_id,)).fetchone()
+        if change is None:
+            flash(_("Nie ma zmian do cofnięcia."), "error")
+        else:
+            old = json.loads(change["old_values"])
+            conn.execute(f"UPDATE ingredients SET {', '.join(f'{k} = ?' for k in old)} WHERE id = ?",
+                         (*old.values(), ingredient_id))
+            conn.execute("DELETE FROM ingredient_changes WHERE id = ?", (change["id"],))
+            flash(_("Cofnięto zmianę z {when}.", when=change["changed_at"][:16]), "ok")
+    return redirect(url_for("ingredient_card", ingredient_id=ingredient_id))
 
 
 @app.post("/skladnik/<int:ingredient_id>/przyjmij")
@@ -619,8 +673,10 @@ def recipe_editor(conn, recipe, flavors, recipe_id=None):
     flavor_rows = [{"id": i, "pct": p, "label": labels.get(i, "?")} for i, p in flavors]
     history = []
     if recipe_id:
-        history = conn.execute("SELECT * FROM recipe_history WHERE recipe_id = ? ORDER BY date DESC",
-                               (recipe_id,)).fetchall()
+        history = conn.execute(
+            "SELECT h.*, p.rating, p.tasting_note, p.amount_ml, p.ready_at FROM recipe_history h"
+            " LEFT JOIN productions p ON p.id = h.production_id WHERE h.recipe_id = ? ORDER BY h.date DESC, h.id DESC",
+            (recipe_id,)).fetchall()
     return render_template("recipe_edit.html", recipe=recipe, recipe_id=recipe_id, flavor_rows=flavor_rows,
                            options=options, folders=folders(conn, "recipes"), history=history)
 
@@ -767,7 +823,7 @@ def production_new():
                                          " ORDER BY lower(name)")]
     preselect = request.args.get("przepis", type=int) or (int(form["recipe_id"]) if form.get("recipe_id", "").isdigit() else None)
     return render_template("production_new.html", recipes=recipe_options, bottles=bottles, today=db.today(),
-                           preselect=preselect, form=form)
+                           preselect=preselect, form=form, preset_amount=request.args.get("ilosc", type=float))
 
 
 @app.post("/api/produkcja/podglad")
@@ -799,7 +855,27 @@ def production_view(production_id):
         lines = conn.execute(
             "SELECT m.*, i.name, i.manufacturer, i.category FROM movements m JOIN ingredients i ON i.id = m.ingredient_id"
             " WHERE m.production_id = ? ORDER BY i.category = 'bottle', m.id", (production_id,)).fetchall()
-    return render_template("production_view.html", prod=prod, lines=lines)
+    return render_template("production_view.html", prod=prod, lines=lines, today=db.today())
+
+
+@app.post("/produkcja/<int:production_id>/ocena")
+def production_rate(production_id):
+    """Ocena partii po spróbowaniu (oraz ewentualna zmiana daty „gotowe od”)."""
+    rating = request.form.get("rating", type=int)
+    ready_at = request.form.get("ready_at") or None
+    note = request.form.get("tasting_note", "").strip()
+    with db.connect() as conn:
+        conn.execute("UPDATE productions SET rating = ?, tasting_note = ?, ready_at = COALESCE(?, ready_at),"
+                     " tasted_at = CASE WHEN ? IS NOT NULL THEN COALESCE(tasted_at, date('now', 'localtime')) END"
+                     " WHERE id = ?", (rating or None, note, ready_at, rating or None, production_id))
+    flash(_("Zapisano ocenę partii.") if rating else _("Zapisano."), "ok")
+    return redirect(back_url(url_for("production_view", production_id=production_id)))
+
+
+def back_url(default):
+    """Adres powrotu z formularza – tylko w obrębie programu."""
+    target = request.form.get("next") or ""
+    return target if target.startswith("/") and not target.startswith("//") else default
 
 
 @app.post("/produkcja/<int:production_id>/cofnij")
@@ -825,6 +901,53 @@ def search_results(query, limit=None):
         for item in items:
             item["url"] = url_for(SEARCH_LINKS[key], **{SEARCH_ARGS[key]: item["id"]})
     return groups
+
+
+@app.route("/co-moge-zrobic")
+def can_make():
+    import planner
+    with db.connect() as conn:
+        rows = planner.capacity(conn)
+    return render_template("can_make.html", rows=rows)
+
+
+@app.post("/api/plan")
+def api_plan():
+    import planner
+    with db.connect() as conn:
+        return planner.plan(conn, (request.get_json(silent=True) or {}).get("items", []))
+
+
+@app.post("/plan/do-listy")
+def plan_to_list():
+    """Braki z planu produkcji na listę zakupów (liczba opakowań wg ostatnio kupowanej pojemności)."""
+    import math
+    import planner
+    with db.connect() as conn:
+        result = planner.plan(conn, (request.get_json(silent=True) or {}).get("items", []))
+        added = already = 0
+        for line in result["lines"]:
+            if line["missing"] <= 0:
+                continue
+            ing = conn.execute("SELECT * FROM ingredients WHERE id = ?", (line["ingredient_id"],)).fetchone()
+            pack = default_pack(conn, ing)
+            count = max(1, math.ceil(line["missing"] / pack)) if pack else 1
+            if add_to_list(conn, ing, pack, count):
+                added += 1
+            else:
+                already += 1
+    msg = _("Dodano do listy zakupów: {n}", n=added) + (", " + _("już na liście: {n}", n=already) if already else "")
+    return {"added": added, "already": already, "message": msg}
+
+
+@app.route("/raporty")
+def reports():
+    import reports as rep
+    months = request.args.get("miesiace", 12, type=int)
+    months = months if months in (3, 6, 12, 24) else 12
+    with db.connect() as conn:
+        data = rep.build(conn, months)
+    return render_template("reports.html", r=data)
 
 
 @app.route("/kalkulator-mieszania")

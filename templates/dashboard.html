@@ -33,6 +33,13 @@
     <span class="t-value">{{ stats.bought|money }}</span>
     <span class="t-sub">{{ _('bez bilansu otwarcia') }}</span>
   </a>
+  {% set ready = tasting|selectattr('ready_at', 'le', today)|list %}
+  <a class="tile {{ 'orange' if ready else 'blue' }}" href="#sprobuj">
+    <svg><use href="#i-clock"/></svg>
+    <span class="t-label">{{ _('Do spróbowania') }}</span>
+    <span class="t-value">{{ ready|length }}</span>
+    <span class="t-sub">{{ _('{n} partii jeszcze dojrzewa', n=tasting|length - ready|length) }}</span>
+  </a>
   <a class="tile violet" href="{{ url_for('recipes') }}">
     <svg><use href="#i-flask"/></svg>
     <span class="t-label">{{ _('Przepisy') }}</span>
@@ -67,6 +74,23 @@
     {% endif %}
   </section>
 
+  {% if tasting %}
+  <section class="card" id="sprobuj">
+    <h2>{{ _('Do spróbowania i oceny') }}</h2>
+    <table class="grid compact">
+      <tbody>
+      {% for p in tasting %}
+        {% set left = p.ready_at|days_until %}
+        <tr onclick="location.href='{{ url_for('production_view', production_id=p.id) }}'">
+          <td><a href="{{ url_for('production_view', production_id=p.id) }}">{{ p.recipe_name }}</a> <small>{{ p.amount_ml|num }} ml · {{ p.date }}</small></td>
+          <td class="r">{% if left <= 0 %}<span class="tag ok">{{ _('gotowe – oceń') }}</span>{% else %}<span class="tag group">{{ _('dojrzewa jeszcze 1 dzień') if left == 1 else _('dojrzewa jeszcze {n} dni', n=left) }}</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
   <section class="card">
     <h2>{{ _('Ostatnio robione') }}</h2>
     <table class="grid compact">
@@ -91,7 +115,7 @@
       {% for p in recent_receipts %}
         <tr onclick="location.href='{{ url_for('receipt_view', purchase_id=p.id) }}'">
           <td class="muted" style="width:6.5rem">{{ p.date }}</td>
-          <td><a href="{{ url_for('receipt_view', purchase_id=p.id) }}">{{ p.supplier or p.note or _('Przyjęcie') }}</a> <small>{{ p.lines }} {{ _('poz.') }}</small></td>
+          <td><a href="{{ url_for('receipt_view', purchase_id=p.id) }}">{{ p.supplier or (_(p.note) if p.note else '') or _('Przyjęcie') }}</a> <small>{{ p.lines }} {{ _('poz.') }}</small></td>
           <td class="r">{{ (p.total or 0)|money }}</td>
         </tr>
       {% else %}

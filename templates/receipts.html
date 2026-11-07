@@ -11,7 +11,7 @@
   {% for r in rows %}
     <tr onclick="location.href='{{ url_for('receipt_view', purchase_id=r.id) }}'">
       <td><a href="{{ url_for('receipt_view', purchase_id=r.id) }}">{{ r.date }}</a></td>
-      <td>{{ r.supplier }}</td><td>{{ r.note }}</td>
+      <td>{{ r.supplier }}</td><td>{{ _(r.note) if r.note else "" }}</td>
       <td class="r">{{ r.lines }}</td><td class="r">{{ (r.total or 0)|money }}</td>
     </tr>
   {% else %}

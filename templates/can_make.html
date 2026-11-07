@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Co mogę zrobić?') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>{{ _('Co mogę zrobić?') }}</h1>
+  <div class="actions">
+    <a class="btn primary" href="#plan"><svg><use href="#i-list"/></svg>{{ _('Zaplanuj produkcję') }}</a>
+    <a class="btn" href="{{ url_for('production_new') }}"><svg><use href="#i-make"/></svg>{{ _('Zrób liquid') }}</a>
+  </div>
+</div>
+<p class="muted" style="margin-top:0">{{ _('Ile każdego aktywnego przepisu zrobisz z tego, co masz teraz w magazynie (bez butelek). „Ogranicza” to składnik, który skończy się pierwszy.') }}</p>
+
+<div class="toolbar">
+  <input type="search" id="search" placeholder="{{ _('Szukaj przepisu…') }}">
+  <label class="check"><input type="checkbox" id="onlyPossible" checked> {{ _('tylko możliwe do zrobienia') }}</label>
+</div>
+<table class="grid" id="capTable">
+  <thead><tr><th>{{ _('Przepis') }}</th><th class="r">{{ _('Ocena') }}</th><th class="r">{{ _('Maksymalnie') }}</th><th class="r">{{ _('Porcji') }}</th><th>{{ _('Ogranicza') }}</th><th data-nosort></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr data-max="{{ r.max_ml }}" data-search="{{ (r.name ~ ' ' ~ r.folder)|lower }}">
+      <td data-sort="{{ r.name }}"><a href="{{ url_for('recipe_edit', recipe_id=r.id) }}">{{ r.name }}</a>{% if r.folder %}<span class="tag group">{{ r.folder }}</span>{% endif %}
+        {% if r.problem %}<div class="desc neg">{{ r.problem }}</div>{% endif %}</td>
+      <td class="r stars" data-sort="{{ r.rating }}">{{ '★' * r.rating }}<span class="muted">{{ '★' * (5 - r.rating) }}</span></td>
+      <td class="r {{ 'neg' if r.max_ml < r.amount_ml }}" data-sort="{{ r.max_ml }}"><b>{{ r.max_ml|num(1) }} ml</b></td>
+      <td class="r muted" data-sort="{{ r.portions }}">{{ r.portions }} × {{ r.amount_ml|num }} ml</td>
+      <td>{{ r.limit }}</td>
+      <td class="r nowrap">
+        {% if r.max_ml >= 1 %}<a class="link" href="{{ url_for('production_new', przepis=r.id, ilosc=[r.amount_ml, r.max_ml]|min) }}">{{ _('zrób') }}</a>{% endif %}
+        <button type="button" class="link toplan" data-id="{{ r.id }}" data-name="{{ r.name }}" data-ml="{{ r.amount_ml }}" style="margin-left:.7rem">{{ _('do planu') }}</button>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="empty">{{ _('Nie masz jeszcze przepisów.') }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<section class="card" id="plan" style="margin-top:1rem">
+  <h2>{{ _('Plan produkcji') }}</h2>
+  <p class="muted" style="margin-top:0">{{ _('Dodaj przepisy (przyciskiem „do planu” albo poniżej), ustaw ilość i liczbę butelek – zobaczysz, czego zabraknie.') }}</p>
+  <table class="grid lines"><tbody id="planRows"></tbody></table>
+  <div class="formfoot left" style="gap:.6rem">
+    <input id="planAdd" list="planRecipes" placeholder="{{ _('dodaj przepis do planu…') }}" style="max-width:22rem">
+    <button type="button" class="btn" id="planClear">{{ _('Wyczyść plan') }}</button>
+  </div>
+  <div id="planResult"></div>
+</section>
+<datalist id="planRecipes">{% for r in rows %}<option value="{{ r.name }}">{% endfor %}</datalist>
+<template id="planTpl">
+  <tr>
+    <td class="p-name"></td>
+    <td style="width:8rem"><div class="unitbox"><input class="p-ml" inputmode="decimal"><span class="unit">ml</span></div></td>
+    <td style="width:7rem"><div class="unitbox"><input class="p-count" inputmode="numeric" value="1"><span class="unit">×</span></div></td>
+    <td style="width:2rem"><button type="button" class="link danger remove" title="{{ _('Usuń z planu') }}">✕</button></td>
+  </tr>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const RECIPES = {{ rows|map(attribute='name')|list|tojson }};
+  const IDS = {{ rows|map(attribute='id')|list|tojson }};
+  const AMOUNTS = {{ rows|map(attribute='amount_ml')|list|tojson }};
+  const num = num0;
+  const fmt = (v, d = 1) => fmtNum(v, d);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+  // Filtr listy możliwości.
+  const rows = [...document.querySelectorAll('#capTable tbody tr[data-max]')];
+  const search = document.getElementById('search'), only = document.getElementById('onlyPossible');
+  function filter() {
+    const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+    rows.forEach(tr => {
+      tr.hidden = (only.checked && num(tr.dataset.max) < 1) || !words.every(w => tr.dataset.search.includes(w));
+    });
+  }
+  search.addEventListener('input', filter); only.addEventListener('change', filter); filter();
+
+  // Plan produkcji.
+  const tbody = document.getElementById('planRows'), tpl = document.getElementById('planTpl');
+  const STORE = 'productionPlan';
+  function addPlan(id, name, ml, count) {
+    const tr = tpl.content.firstElementChild.cloneNode(true);
+    tr.dataset.id = id;
+    tr.querySelector('.p-name').textContent = name;
+    tr.querySelector('.p-ml').value = decStr(Math.round(ml * 100) / 100);
+    tr.querySelector('.p-count').value = count || 1;
+    tr.querySelector('.remove').addEventListener('click', () => { tr.remove(); update(); });
+    tbody.appendChild(tr);
+  }
+  document.querySelectorAll('.toplan').forEach(b => b.addEventListener('click', () => {
+    addPlan(b.dataset.id, b.dataset.name, num(b.dataset.ml), 1); update();
+    document.getElementById('plan').scrollIntoView({behavior: 'smooth'});
+  }));
+  const planAdd = document.getElementById('planAdd');
+  planAdd.addEventListener('change', () => {
+    const i = RECIPES.findIndex(n => n.toLowerCase() === planAdd.value.trim().toLowerCase());
+    if (i >= 0) { addPlan(IDS[i], RECIPES[i], AMOUNTS[i], 1); planAdd.value = ''; update(); }
+  });
+  document.getElementById('planClear').addEventListener('click', () => { tbody.innerHTML = ''; update(); });
+  let timer;
+  tbody.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(update, 300); });
+
+  const items = () => [...tbody.children].map(tr => ({recipe_id: +tr.dataset.id, ml: num(tr.querySelector('.p-ml').value),
+                                                         count: Math.max(1, Math.round(num(tr.querySelector('.p-count').value)))}));
+  let seq = 0;
+  async function update() {
+    const its = items();
+    try { localStorage.setItem(STORE, JSON.stringify(its.map((it, i) => ({...it, name: tbody.children[i].querySelector('.p-name').textContent})))); } catch (e) {}
+    const box = document.getElementById('planResult');
+    if (!its.length) { box.innerHTML = ''; return; }
+    const my = ++seq;
+    const d = await (await fetch('{{ url_for("api_plan") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({items: its})})).json();
+    if (my !== seq) return;
+    box.innerHTML = (d.problems.length ? d.problems.map(p => `<div class="note warn">${esc(p)}</div>`).join('') : '') + `
+      <table class="grid compact calc" style="margin-top:.8rem">
+        <thead><tr><th>${t('Składnik')}</th><th class="r">${t('Potrzeba')}</th><th class="r">${t('Stan')}</th><th class="r">${t('Brakuje')}</th></tr></thead>
+        <tbody>${d.lines.map(l => `<tr class="${l.missing > 0 ? 'short' : ''}"><td>${esc(l.name)}</td>
+          <td class="r">${fmt(l.need, 2)}</td><td class="r muted">${fmt(l.stock)}</td>
+          <td class="r ${l.missing > 0 ? 'neg' : 'muted'}">${l.missing > 0 ? '<b>' + fmt(l.missing, 2) + '</b>' : '–'}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="formfoot" style="justify-content:space-between;align-items:center">
+        <span class="muted">${t('Koszt planu:')} <b>${fmtMoney(d.cost)}</b> · ${d.missing_count ? '<span class="neg">' + t('brakuje składników: {n}', {n: d.missing_count}) + '</span>' : t('wszystko jest na stanie')}</span>
+        ${d.missing_count ? '<button type="button" class="btn primary" id="toList"><svg><use href="#i-cart"/></svg>' + t('Dodaj braki do listy zakupów') + '</button>' : ''}
+      </div>`;
+    const btn = document.getElementById('toList');
+    btn && btn.addEventListener('click', async () => {
+      const r = await (await fetch('{{ url_for("plan_to_list") }}', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({items: items()})})).json();
+      btn.outerHTML = `<span class="tag ok">${esc(r.message)}</span> <a href="{{ url_for('shopping') }}">${t('Lista zakupów')}</a>`;
+    });
+  }
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(STORE) || '[]'); } catch (e) {}
+  saved.filter(s => IDS.includes(s.recipe_id)).forEach(s => addPlan(s.recipe_id, s.name, s.ml, s.count));
+  update();
+})();
+</script>
+{% endblock %}

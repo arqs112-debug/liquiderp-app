@@ -7,7 +7,7 @@
 </div>
 <table class="grid">
   <thead><tr><th>{{ _('Data') }}</th><th>{{ _('Przepis') }}</th><th class="r">{{ _('Ilość') }}</th><th class="r">{{ _('Nikotyna') }}</th><th class="r">{{ _('PG/VG') }}</th>
-    <th class="r">{{ _('Koszt') }}</th><th class="r">{{ _('Koszt / ml') }}</th></tr></thead>
+    <th class="r">{{ _('Koszt') }}</th><th class="r">{{ _('Koszt / ml') }}</th><th>{{ _('Gotowe od') }}</th><th class="r">{{ _('Ocena') }}</th></tr></thead>
   <tbody>
   {% for p in rows %}
     <tr onclick="location.href='{{ url_for('production_view', production_id=p.id) }}'">
@@ -18,9 +18,11 @@
       <td class="r">{{ p.pg_pct|num(0) }}/{{ p.vg_pct|num(0) }}</td>
       <td class="r">{{ p.cost_total|money }}</td>
       <td class="r">{{ (p.cost_total / p.amount_ml if p.amount_ml else 0)|money }}</td>
+      <td>{{ p.ready_at or p.date }}</td>
+      <td class="r stars" data-sort="{{ p.rating or '' }}">{% if p.rating %}{{ '★' * p.rating }}<span class="muted">{{ '★' * (5 - p.rating) }}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
     </tr>
   {% else %}
-    <tr><td colspan="7" class="empty">{{ _('Nic jeszcze nie zrobiono w LiquidERP.') }}</td></tr>
+    <tr><td colspan="9" class="empty">{{ _('Nic jeszcze nie zrobiono w LiquidERP.') }}</td></tr>
   {% endfor %}
   </tbody>
 </table>

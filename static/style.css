@@ -400,3 +400,16 @@ button.side-link { width: calc(100% - .8rem); background: none; border-top: 0; b
 #updates progress { width: 100%; max-width: 420px; margin-top: .5rem; accent-color: var(--accent); }
 #updates details { margin-top: .7rem; }
 #updates pre { white-space: pre-wrap; font: inherit; font-size: .85rem; color: var(--muted); max-height: 16rem; overflow: auto; margin: .4rem 0 0; }
+
+/* Raporty: proste paski w tabeli. */
+.bars td { vertical-align: middle; }
+.bars .bar { height: 8px; background: var(--hover); border-radius: 4px; overflow: hidden; min-width: 6rem; }
+.bars .bar span { display: block; height: 100%; border-radius: 4px; }
+.bars .b-spend { background: var(--warn); }
+.bars .b-ml { background: var(--info); }
+.bars td small { display: block; margin-top: .15rem; }
+
+.inline-date { display: flex; gap: .4rem; }
+.inline-date .btn { padding: .3rem .6rem; }
+/* Braki zawsze podświetlone, także w parzystych (cieniowanych) wierszach. */
+.grid.calc tbody tr.short td, .grid.calc tbody tr.short:nth-child(even) td { background: var(--danger-bg); }

@@ -35,6 +35,7 @@
         onclick="location.href='{{ url_for('ingredient_card', ingredient_id=r.id) }}'">
       <td data-sort="{{ r.name }}"><a href="{{ url_for('ingredient_card', ingredient_id=r.id) }}">{{ r.name }}</a>
         {% if r.folder %}<span class="tag group">{{ r.folder }}</span>{% endif %}
+        {% if r.opened_months is not none and r.opened_months >= 12 and r.qty > 0 %}<span class="tag warn" title="{{ _('otwarty {date}', date=r.opened_at) }}">{{ _('otwarty {n} mies.', n=r.opened_months) }}</span>{% endif %}
         {% if r.low %}<span class="tag warn" title="{{ _('Poniżej stanu minimalnego') }} {{ r.min_stock|num }} {{ r.unit }}">{{ _('mało') }}</span>{% endif %}
         {% if r.description %}<div class="desc">{{ r.description|truncate(90) }}</div>{% endif %}</td>
       <td>{{ r.manufacturer }}</td>

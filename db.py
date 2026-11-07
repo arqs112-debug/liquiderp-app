@@ -151,6 +151,23 @@ CREATE TABLE shopping_list (
 );
 """
 
+SCHEMA_V7 = """
+-- Dojrzewanie i ocena partii.
+ALTER TABLE productions ADD COLUMN ready_at TEXT;
+ALTER TABLE productions ADD COLUMN rating INTEGER;
+ALTER TABLE productions ADD COLUMN tasting_note TEXT NOT NULL DEFAULT '';
+ALTER TABLE productions ADD COLUMN tasted_at TEXT;
+UPDATE productions SET ready_at = date WHERE ready_at IS NULL;
+-- Data otwarcia butelki aromatu i historia zmian karty składnika (do cofania).
+ALTER TABLE ingredients ADD COLUMN opened_at TEXT;
+CREATE TABLE ingredient_changes (
+    id             INTEGER PRIMARY KEY,
+    ingredient_id  INTEGER NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    changed_at     TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    old_values     TEXT NOT NULL
+);
+"""
+
 # Ustawienia tworzymy zawsze (IF NOT EXISTS) – także w bazie przywróconej ze starszej kopii.
 SCHEMA_SETTINGS = """
 CREATE TABLE IF NOT EXISTS settings (
@@ -159,7 +176,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 """
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def connect():
@@ -185,6 +202,8 @@ def init_db():
             conn.executescript(SCHEMA_V5)
         if version < 6:
             conn.executescript(SCHEMA_V6)
+        if version < 7:
+            conn.executescript(SCHEMA_V7)
         conn.executescript(SCHEMA_SETTINGS)
         conn.execute(f"PRAGMA user_version = {max(version, SCHEMA_VERSION)}")
     import settings

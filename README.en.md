@@ -14,12 +14,17 @@ no account, no cloud, no ads. Free, MIT licensed. The interface is available in 
   products, pack sizes, quantities and prices and matches them to your ingredients (it remembers shop names).
 - **Recipes** – live calculation in ml and grams (also cumulative for weighing into one bottle), PG/VG with
   ±0.5% arrows, nicotine, cost, shortages; groups, ratings, archive.
-- **Production** – “Make e-liquid” with stock validation, bottles, batch cost and undo.
+- **Production** – “Make e-liquid” with stock validation, bottles, batch cost and undo; steeping (ready date from
+  the recipe) and batch rating with tasting notes, plus a “Ready to taste” list on the dashboard.
+- **What can I make?** – how much of each recipe your current stock allows, and a production plan whose shortages
+  go to the shopping list in one click.
+- **Reports** – spending and production by month, purchases by shop, most-made recipes, long-unused flavors.
 - **Mixing calculator** – combine ready-made liquids (e-liquid, shortfill, base, nic shot, PG/VG) and see volume,
   nicotine strength and ratio; it can also work out how much base to add for a target strength.
 - **Shopping list** – shortages in one click, pack size and count, copy as text, ticked off automatically on receipt.
 - **Import from EJuiceCalculator** – ingredients, stock, prices, recipes and history from its XML file.
-- Search (`/` or `Ctrl+K`), sortable lists, `Esc` returns to the list, dark and light theme.
+- Search (`/` or `Ctrl+K`), `Ctrl+S` saves, `Ctrl+F` searches the list, sortable lists, `Esc` returns to the list,
+  dark and light theme; flavor opening date with a warning after a year, “Undo last change” on the ingredient card.
 - **Settings** (bottom of the menu): language, default recipe parameters, currency, theme, ml/g, number of backups,
   PDF for phone; tabs for backups, data import and program information.
 - **Backups** – automatic once a day, manual, and one-click restore.

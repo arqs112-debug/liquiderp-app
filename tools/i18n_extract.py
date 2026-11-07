@@ -57,6 +57,8 @@ def dynamic():
     keys |= set(backup.REASONS.values())
     keys |= {label for _, label in phone_export.SECTIONS}
     keys.add(phone_export.FILE_NAME)
+    import import_ejc
+    keys |= {import_ejc.OPENING_NOTE, "import z EJuiceCalculatora"}  # notatki z importu tłumaczone przy wyświetlaniu
     base = open(os.path.join(ROOT, "templates", "base.html"), encoding="utf-8").read()
     nav = base[base.index("{% set nav = ["):base.index("] %}", base.index("{% set nav = ["))]
     keys |= set(re.findall(r"\('([^']+)', \[", nav))                     # grupy

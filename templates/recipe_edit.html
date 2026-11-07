@@ -107,14 +107,17 @@
       </table>
       <div class="summary" id="summary"></div>
     </div>
-    <div class="formfoot"><button class="btn primary" id="saveBtn">{{ _('Zapisz przepis') }}</button></div>
+    <div class="formfoot"><button class="btn primary" id="saveBtn" data-ctrl-s>{{ _('Zapisz przepis') }}</button></div>
 
     {% if history %}
     <div class="card">
       <h2>{{ _('Historia') }}</h2>
       <ul class="history">
         {% for h in history[:12] %}
-          <li>{{ h.date[:10] }} · {{ {'made': 'zrobiono', 'printed': 'wydrukowano'}.get(h.event, h.event) }}{% if h.note %} <small>{{ h.note }}</small>{% endif %}</li>
+          <li>{% if h.production_id %}<a href="{{ url_for('production_view', production_id=h.production_id) }}">{{ h.date[:10] }}</a>{% else %}{{ h.date[:10] }}{% endif %}
+            · {{ {'made': _('zrobiono'), 'printed': _('wydrukowano')}.get(h.event, h.event) }}{% if h.note %} <small>{{ _(h.note) }}</small>{% endif %}
+            {% if h.rating %}<span class="stars">{{ '★' * h.rating }}<span class="muted">{{ '★' * (5 - h.rating) }}</span></span>{% elif h.production_id %}<small class="muted">· {{ _('nieoceniona') }}</small>{% endif %}
+            {% if h.tasting_note %}<div class="desc">„{{ h.tasting_note }}”</div>{% endif %}</li>
         {% endfor %}
         {% if history|length > 12 %}<li class="muted">{{ _('…i {n} wcześniejszych', n=history|length - 12) }}</li>{% endif %}
       </ul>

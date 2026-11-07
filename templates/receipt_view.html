@@ -9,7 +9,7 @@
     <a class="btn" href="{{ url_for('receipts') }}"><svg><use href="#i-list"/></svg>{{ _('Historia przyjęć') }}</a>
   </div>
 </div>
-{% if purchase.note %}<p class="muted">{{ purchase.note }}</p>{% endif %}
+{% if purchase.note %}<p class="muted">{{ _(purchase.note) }}</p>{% endif %}
 <table class="grid">
   <thead><tr><th>{{ _('Składnik') }}</th><th>{{ _('Producent') }}</th><th>{{ _('Kategoria') }}</th><th class="r">{{ _('Opakowanie') }}</th><th class="r">{{ _('Sztuk') }}</th>
     <th class="r">{{ _('Cena / opak.') }}</th><th class="r">{{ _('Ilość') }}</th><th class="r">{{ _('Razem') }}</th><th></th></tr></thead>
@@ -17,13 +17,13 @@
   {% set ns = namespace(total=0) %}
   {% for l in lines %}
     {% set unit = CATEGORIES[l.category].unit %}
-    {% set ns.total = ns.total + l.qty * l.unit_cost %}
+    {% set ns.total = ns.total + l.qty * (l.unit_cost or 0) %}
     <tr>
       <td><a href="{{ url_for('ingredient_card', ingredient_id=l.ingredient_id) }}">{{ l.name }}</a></td>
       <td>{{ l.manufacturer }}</td><td>{{ CATEGORIES[l.category].single }}</td>
       <td class="r">{{ l.pack_size|num }} {{ unit }}</td><td class="r">{{ l.pack_count }}</td>
-      <td class="r">{{ (l.unit_cost * l.pack_size)|money }}</td>
-      <td class="r">{{ l.qty|num }} {{ unit }}</td><td class="r">{{ (l.qty * l.unit_cost)|money }}</td>
+      <td class="r">{{ ((l.unit_cost or 0) * l.pack_size)|money if l.pack_size else '–' }}</td>
+      <td class="r">{{ l.qty|num }} {{ unit }}</td><td class="r">{{ (l.qty * (l.unit_cost or 0))|money }}</td>
       <td class="r">
         <form method="post" action="{{ url_for('movement_delete', movement_id=l.id) }}" onsubmit="return confirm({{ _('Usunąć tę pozycję?')|tojson|forceescape }})">
           <input type="hidden" name="next" value="{{ url_for('receipt_view', purchase_id=purchase.id) if lines|length > 1 else url_for('receipts') }}">

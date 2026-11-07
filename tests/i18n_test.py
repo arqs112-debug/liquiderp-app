@@ -21,7 +21,8 @@ import app as m
 c = m.app.test_client()
 POLISH = re.compile(r"[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]|\b(nie|jest|albo|oraz|się|przepis\w*|Dodaj|Zapisz|Usuń|brak|Stan|Wybierz|kopi\w|sztuk|Razem|"
                     r"Nazwa|Sklep|Uwagi|Producent|Kategoria|Grupa|Ocena|pozycj\w*|dni|aktywn\w*|zamknij|Magazyn|Pulpit|"
-                    r"Przyjęcie|Produkcja|Ustawienia|Narzędzia|szt|Szukaj|wersja|Ilość|Koszt|Wartość)\b")
+                    r"Przyjęcie|Produkcja|Ustawienia|Narzędzia|szt|Szukaj|wersja|Ilość|Koszt|Wartość|zrobiono|wydrukowano|"
+                    r"mies|partii|Raporty|Zakupy|ocena|dojrzewa|gotowe|otwarty|Bilans|import z)\b")
 ALLOWED = {"Język", "Polski", "zł"}  # nazwa języka w przełączniku i domyślna waluta
 
 
@@ -89,6 +90,9 @@ c.post("/lista/dodaj", data={"ingredient_id": str(straw), "pack_size": "10"})
 c.post("/lista/dodaj", data={"name": "Caps"})
 import backup
 backup.create("reczna")
+c.post(f"/produkcja/{pid}/ocena", data={"rating": "4", "tasting_note": "too sweet", "ready_at": "2026-10-20"})
+c.post(f"/skladnik/{straw}", data={"name": "Strawberry", "category": "aroma", "manufacturer": "TPA", "pg_pct": "100",
+                                  "vg_pct": "0", "active": "1", "opened_at": "2024-01-01"})
 with db.connect() as conn:  # składnik poniżej minimum i bez ceny – ramki na pulpicie
     conn.execute("UPDATE ingredients SET min_stock = 500 WHERE id = ?", (straw,))
     nop = db.create_ingredient(conn, "aroma", "No Price", "X")
@@ -97,7 +101,8 @@ with db.connect() as conn:  # składnik poniżej minimum i bez ceny – ramki na
 pages = ["/", "/magazyn", "/magazyn?nieaktywne=1", "/skladnik/nowy", f"/skladnik/{straw}", f"/skladnik/{bottle}", "/przyjecie",
          "/lista-zakupow", "/przyjecia", "/przyjecie/1", "/przepisy", "/przepisy?archiwum=1", "/przepis/nowy", f"/przepis/{rid}",
          "/produkcja/nowa", f"/produkcja/nowa?przepis={rid}", "/produkcja", f"/produkcja/{pid}", "/kalkulator-mieszania",
-         "/szukaj?q=straw", "/szukaj?q=zzzz", "/kopie", "/import", "/ustawienia", "/ustawienia/informacje", "/start?ponownie=1"]
+         "/szukaj?q=straw", "/szukaj?q=zzzz", "/kopie", "/import", "/ustawienia", "/ustawienia/informacje", "/start?ponownie=1",
+         "/co-moge-zrobic", "/raporty", "/raporty?miesiace=24"]
 bad = {}
 for url in pages:
     resp = c.get(url)

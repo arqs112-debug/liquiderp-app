@@ -1,4 +1,6 @@
 """Produkcja liquidu: podgląd z walidacją stanów, zapis rozchodów i cofnięcie."""
+from datetime import date, timedelta
+
 import calc
 import settings
 import db
@@ -50,7 +52,7 @@ def preview(conn, params):
         recipe["pg_pct"] = min(max(params["pg_pct"], 0), 100)
         recipe["vg_pct"] = 100 - recipe["pg_pct"]
     result = calc.compute(conn, recipe, flavors)
-    result["recipe"] = {k: recipe[k] for k in ("id", "name", "amount_ml", "nicotine_mg", "pg_pct", "vg_pct")}
+    result["recipe"] = {k: recipe[k] for k in ("id", "name", "amount_ml", "nicotine_mg", "pg_pct", "vg_pct", "steep_days")}
 
     state = db.stock_state(conn)
     bottle_lines, bottle_cost = [], 0.0
@@ -97,11 +99,13 @@ def commit(conn, params):
                                                 for m in result["missing"])))
 
     rec, totals = result["recipe"], result["totals"]
+    # Gotowe do spróbowania po dniach dojrzewania z przepisu.
+    ready_at = (date.fromisoformat(params["date"]) + timedelta(days=int(rec.get("steep_days") or 0))).isoformat()
     production_id = conn.execute(
         "INSERT INTO productions (recipe_id, recipe_name, date, amount_ml, nicotine_mg, pg_pct, vg_pct,"
-        " cost_total, note, forced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " cost_total, note, forced, ready_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (rec["id"], rec["name"], params["date"], totals["ml"], totals["nicotine_mg"], totals["pg_pct"],
-         totals["vg_pct"], totals["cost"], params["note"], 1 if result["missing"] else 0),
+         totals["vg_pct"], totals["cost"], params["note"], 1 if result["missing"] else 0, ready_at),
     ).lastrowid
     note = _("Produkcja: {name} ({ml} ml)", name=rec["name"], ml=f"{totals['ml']:g}")
     rows = [(l["ingredient_id"], -l["ml"], (l["cost"] / l["ml"]) if l["cost"] and l["ml"] else None)

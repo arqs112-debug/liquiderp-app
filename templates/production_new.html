@@ -220,6 +220,9 @@
 
   const pre = RECIPES.find(r => r.id === {{ preselect|tojson }});
   if (pre) { name.value = pre.label; pickRecipe(pre, {{ (form.get('amount_ml') is not none and form.get('amount_ml') != '')|tojson }}); }
+  {% if preset_amount %}
+  if (pre) { amount.value = fmt({{ preset_amount }}); suggestBottles(); }  // ilość z „Co mogę zrobić?”
+  {% endif %}
   update();
 })();
 </script>
